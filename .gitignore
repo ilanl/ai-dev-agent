@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Logs & runtime
+*.log
+logs/
+.agent-runs/
+
+# Test / coverage
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / local editor state
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Agora / Cursor local context (machine-specific)
+.cursor-context.local.json
+.agora-context/

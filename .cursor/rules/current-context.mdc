@@ -1,0 +1,26 @@
+---
+description: Agora bounded context — scope required before any work
+alwaysApply: true
+---
+
+No active Agora Context is selected.
+
+Do not search, read, edit, or run commands until scope is set.
+
+Repo-wide counting, searching, grepping, listing, and shell commands also require scope first.
+
+Ask the user once:
+
+> **Scope required:**
+> **A — Focus** (Agora Context → ✓ → Confirm → **New Agent chat**)
+> **B — Skip** (full repo)
+>
+> Reply with A or B to proceed.
+
+If the user chooses **A**: explain how to set focus in Agora Context, then stop.
+
+After focus is confirmed, the user must start a **New Agent chat**. Do not reuse an old chat tab — Cursor keeps prior chat context.
+
+If the user chooses **B**: proceed with full repo access.
+
+If the user names explicit file paths in their message, use only those paths and do not ask for scope.
