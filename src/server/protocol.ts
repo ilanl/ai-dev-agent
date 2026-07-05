@@ -2,22 +2,33 @@ import { z } from "zod";
 
 export const PROTOCOL_VERSION = 1;
 
+export const CLIENT_MESSAGE_TYPE = {
+  HELLO: "hello",
+  REQ: "req",
+} as const;
+
+export const SERVER_MESSAGE_TYPE = {
+  WELCOME: "welcome",
+  RES: "res",
+  EVENT: "event",
+} as const;
+
 export const HelloMessage = z.object({
-  type: z.literal("hello"),
+  type: z.literal(CLIENT_MESSAGE_TYPE.HELLO),
   version: z.number().optional(),
   client: z.string().optional(),
   agentId: z.string().optional(),
 });
 
 export const RequestMessage = z.object({
-  type: z.literal("req"),
+  type: z.literal(CLIENT_MESSAGE_TYPE.REQ),
   id: z.string(),
   method: z.string(),
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const ResponseMessage = z.object({
-  type: z.literal("res"),
+  type: z.literal(SERVER_MESSAGE_TYPE.RES),
   id: z.string(),
   ok: z.boolean(),
   result: z.unknown().optional(),
@@ -30,13 +41,13 @@ export const ResponseMessage = z.object({
 });
 
 export const EventMessage = z.object({
-  type: z.literal("event"),
+  type: z.literal(SERVER_MESSAGE_TYPE.EVENT),
   event: z.string(),
   data: z.unknown(),
 });
 
 export const WelcomeMessage = z.object({
-  type: z.literal("welcome"),
+  type: z.literal(SERVER_MESSAGE_TYPE.WELCOME),
   version: z.number(),
   server: z.string(),
   defaultAgentId: z.string(),
@@ -62,8 +73,8 @@ export function parseInboundLine(line: string): InboundMessage {
   }
 
   const type = (json as { type: string }).type;
-  if (type === "hello") return HelloMessage.parse(json);
-  if (type === "req") return RequestMessage.parse(json);
+  if (type === CLIENT_MESSAGE_TYPE.HELLO) return HelloMessage.parse(json);
+  if (type === CLIENT_MESSAGE_TYPE.REQ) return RequestMessage.parse(json);
   throw new Error(`Invalid message type: ${type}`);
 }
 
@@ -74,7 +85,7 @@ export function encodeOutbound(message: OutboundMessage): string {
 export class ProtocolError extends Error {
   constructor(
     readonly code: string,
-    message: string
+    message: string,
   ) {
     super(message);
     this.name = "ProtocolError";

@@ -28,7 +28,7 @@ function resumePromptFor(status: RunStatusResult): string {
     case "plan":
       return 'Your reply (feedback, or "implement" to start coding):';
     case "ship":
-      return 'Ship review — reply: ship | reject | or feedback text';
+      return "Ship review — reply: ship | reject | or feedback text";
     case "question":
       return "Codex is blocked — type your answer";
     default:
@@ -42,12 +42,14 @@ function printPlanInterrupt(payload: ReviewInterruptPayload): void {
 
 async function interactivePlanChat(
   resume: (msg: string) => Promise<RunResult>,
-  initial?: ReviewInterruptPayload
+  initial?: ReviewInterruptPayload,
 ): Promise<number> {
   if (initial) printPlanInterrupt(initial);
 
   while (true) {
-    const msg = await promptAnswer(resumePromptFor({ awaiting: "plan" } as RunStatusResult));
+    const msg = await promptAnswer(
+      resumePromptFor({ awaiting: "plan" } as RunStatusResult),
+    );
     const result = await resume(msg);
     if (result.interrupted && result.interrupt?.gate === "plan") {
       printPlanInterrupt(result.interrupt);
@@ -60,7 +62,7 @@ async function interactivePlanChat(
 async function resumeWithStatus(
   status: RunStatusResult,
   message: string | undefined,
-  resume: (msg: string) => Promise<RunResult>
+  resume: (msg: string) => Promise<RunResult>,
 ): Promise<number> {
   if (!canResume(status)) {
     printStatusResult(status);
@@ -100,7 +102,9 @@ function printResumeGuidance(status: RunStatusResult): void {
   }
 }
 
-function printList(runs: Awaited<ReturnType<ReturnType<typeof getRunCoordinator>["list"]>>): void {
+function printList(
+  runs: Awaited<ReturnType<ReturnType<typeof getRunCoordinator>["list"]>>,
+): void {
   if (!runs.length) {
     console.log("No saved runs.");
     return;
@@ -148,7 +152,10 @@ function printResetResult(result: ResetResult): void {
 
 function handleRunResult(
   result: RunResult,
-  options?: { interactivePlan?: boolean; resume?: (msg: string) => Promise<RunResult> }
+  options?: {
+    interactivePlan?: boolean;
+    resume?: (msg: string) => Promise<RunResult>;
+  },
 ): number | Promise<number> {
   if (
     result.interrupted &&
@@ -173,11 +180,13 @@ function handleRunResult(
   return result.status === "shipped" || result.status === "rejected" ? 0 : 1;
 }
 
-async function runViaDaemon(cli: ReturnType<typeof parseCliArgs>): Promise<number> {
+async function runViaDaemon(
+  cli: ReturnType<typeof parseCliArgs>,
+): Promise<number> {
   const client = await tryConnectClient(cli.agentId);
   if (!client) {
     throw new Error(
-      "agentd is not running. Start it with: npm run agentd\nOr use --local to run in-process."
+      "agentd is not running. Start it with: npm run agentd\nOr use --local to run in-process.",
     );
   }
 
@@ -185,7 +194,11 @@ async function runViaDaemon(cli: ReturnType<typeof parseCliArgs>): Promise<numbe
     if (cli.command === "list") {
       const res = await client.request("ticket.list", { agentId: cli.agentId });
       if (!res.ok) throw new Error(res.error?.message ?? "ticket.list failed");
-      printList(res.result as Awaited<ReturnType<ReturnType<typeof getRunCoordinator>["list"]>>);
+      printList(
+        res.result as Awaited<
+          ReturnType<ReturnType<typeof getRunCoordinator>["list"]>
+        >,
+      );
       return 0;
     }
 
@@ -193,18 +206,24 @@ async function runViaDaemon(cli: ReturnType<typeof parseCliArgs>): Promise<numbe
 
     if (cli.command === "status") {
       const res = await client.request("ticket.status", { threadId });
-      if (!res.ok) throw new Error(res.error?.message ?? "ticket.status failed");
+      if (!res.ok)
+        throw new Error(res.error?.message ?? "ticket.status failed");
       printStatusResult(res.result as RunStatusResult);
       return 0;
     }
 
     if (cli.command === "resume") {
       const statusRes = await client.request("ticket.status", { threadId });
-      if (!statusRes.ok) throw new Error(statusRes.error?.message ?? "ticket.status failed");
+      if (!statusRes.ok)
+        throw new Error(statusRes.error?.message ?? "ticket.status failed");
       const status = statusRes.result as RunStatusResult;
       return resumeWithStatus(status, cli.message, async (message) => {
-        const res = await client.request("ticket.resume", { threadId, message });
-        if (!res.ok) throw new Error(res.error?.message ?? "ticket.resume failed");
+        const res = await client.request("ticket.resume", {
+          threadId,
+          message,
+        });
+        if (!res.ok)
+          throw new Error(res.error?.message ?? "ticket.resume failed");
         return res.result as RunResult;
       });
     }
@@ -240,8 +259,12 @@ async function runViaDaemon(cli: ReturnType<typeof parseCliArgs>): Promise<numbe
     const handled = handleRunResult(startResult, {
       interactivePlan: !cli.message,
       resume: async (message) => {
-        const resumeRes = await client.request("ticket.resume", { threadId, message });
-        if (!resumeRes.ok) throw new Error(resumeRes.error?.message ?? "ticket.resume failed");
+        const resumeRes = await client.request("ticket.resume", {
+          threadId,
+          message,
+        });
+        if (!resumeRes.ok)
+          throw new Error(resumeRes.error?.message ?? "ticket.resume failed");
         return resumeRes.result as RunResult;
       },
     });
@@ -273,7 +296,7 @@ async function runLocal(cli: ReturnType<typeof parseCliArgs>): Promise<number> {
   if (cli.command === "resume") {
     const status = await coordinator.status(threadId);
     return resumeWithStatus(status, cli.message, (message) =>
-      coordinator.resume({ threadId, message })
+      coordinator.resume({ threadId, message }),
     );
   }
 
@@ -307,6 +330,7 @@ async function runLocal(cli: ReturnType<typeof parseCliArgs>): Promise<number> {
 }
 
 async function main(): Promise<void> {
+  console.log("process.argv", process.argv);
   const cli = parseCliArgs(process.argv.slice(2));
   const exitCode = cli.local ? await runLocal(cli) : await runViaDaemon(cli);
   process.exit(exitCode);

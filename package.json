@@ -3,12 +3,16 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "engines": {
+    "node": ">=26"
+  },
   "scripts": {
     "dev": "tsx src/index.ts",
     "agentd": "tsx src/server/agentd.ts",
     "agent": "tsx src/dev-agent.ts",
     "slack": "tsx src/slack/bot.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "npm rebuild better-sqlite3"
   },
   "type": "module",
   "repository": {

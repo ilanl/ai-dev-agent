@@ -1,6 +1,8 @@
 import { connect, type Socket } from "node:net";
 import { loadServerEnv, resolveSocketPath } from "../config/server-env.js";
 import {
+  CLIENT_MESSAGE_TYPE,
+  SERVER_MESSAGE_TYPE,
   type EventMessage,
   type ResponseMessage,
   type WelcomeMessage,
@@ -54,7 +56,7 @@ export class AgentSocketClient {
 
   async hello(options?: { client?: string; agentId?: string }): Promise<WelcomeMessage> {
     await this.write({
-      type: "hello",
+      type: CLIENT_MESSAGE_TYPE.HELLO,
       version: 1,
       ...(options?.client !== undefined ? { client: options.client } : {}),
       ...(options?.agentId !== undefined ? { agentId: options.agentId } : {}),
@@ -74,7 +76,12 @@ export class AgentSocketClient {
     }
 
     const id = String(this.nextId++);
-    const payload = { type: "req" as const, id, method, params: params ?? {} };
+    const payload = {
+      type: CLIENT_MESSAGE_TYPE.REQ,
+      id,
+      method,
+      params: params ?? {},
+    };
 
     return new Promise<RpcResult<T>>((resolve, reject) => {
       const entry = {
@@ -109,12 +116,12 @@ export class AgentSocketClient {
   }
 
   private dispatch(message: ResponseMessage | EventMessage | WelcomeMessage): void {
-    if (message.type === "welcome") {
+    if (message.type === SERVER_MESSAGE_TYPE.WELCOME) {
       this.welcome = message;
       return;
     }
 
-    if (message.type === "event") {
+    if (message.type === SERVER_MESSAGE_TYPE.EVENT) {
       for (const [, pending] of this.pending) {
         pending.events.push(message);
         pending.onEvent?.(message);
@@ -122,7 +129,7 @@ export class AgentSocketClient {
       return;
     }
 
-    if (message.type === "res") {
+    if (message.type === SERVER_MESSAGE_TYPE.RES) {
       const pending = this.pending.get(message.id);
       if (!pending) return;
       this.pending.delete(message.id);

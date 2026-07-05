@@ -16,13 +16,17 @@ import {
 } from "../run-coordinator.js";
 import { ensureAgent, listAgents, registerAgent } from "./agent-registry.js";
 import {
+  CLIENT_MESSAGE_TYPE,
   encodeOutbound,
   PROTOCOL_VERSION,
   ProtocolError,
+  SERVER_MESSAGE_TYPE,
   type EventMessage,
   type HelloMessage,
+  type InboundMessage,
   type RequestMessage,
   type ResponseMessage,
+  type WelcomeMessage,
 } from "./protocol.js";
 import type { RunResult, StartRunParams } from "../run-coordinator.js";
 
@@ -40,7 +44,7 @@ export class ClientConnection {
 
   constructor(
     private readonly socket: Socket,
-    defaultAgentId: string
+    defaultAgentId: string,
   ) {
     this.focus = { agentId: defaultAgentId };
   }
@@ -68,23 +72,26 @@ export class ClientConnection {
 
   private async handleLine(line: string): Promise<void> {
     try {
-      const message = JSON.parse(line) as { type?: string };
-      if (message.type === "hello") {
+      const message = JSON.parse(line) as InboundMessage;
+      if (message.type === CLIENT_MESSAGE_TYPE.HELLO) {
         await this.handleHello(message as HelloMessage);
         return;
       }
       if (!this.greeted) {
         await this.sendWelcome(this.focus.agentId);
       }
-      if (message.type === "req") {
+      if (message.type === CLIENT_MESSAGE_TYPE.REQ) {
         await this.handleRequest(message as RequestMessage);
         return;
       }
-      throw new ProtocolError("INVALID_MESSAGE", `Unknown message type: ${message.type}`);
+      throw new ProtocolError(
+        "INVALID_MESSAGE",
+        `Unknown message type: ${JSON.stringify(message)}`,
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.write({
-        type: "res",
+        type: SERVER_MESSAGE_TYPE.RES,
         id: "0",
         ok: false,
         error: { code: "INVALID_MESSAGE", message: msg },
@@ -107,7 +114,7 @@ export class ClientConnection {
   private async sendWelcome(agentId: string): Promise<void> {
     const env = loadServerEnv();
     this.write({
-      type: "welcome",
+      type: SERVER_MESSAGE_TYPE.WELCOME,
       version: PROTOCOL_VERSION,
       server: "ai-dev-agent",
       defaultAgentId: agentId,
@@ -138,8 +145,15 @@ export class ClientConnection {
         ok: true,
         ...threadFields,
       };
-      if (req.method === "ticket.status" && result && typeof result === "object") {
-        Object.assign(doneFields, formatStatusFields(result as RunStatusResult));
+      if (
+        req.method === "ticket.status" &&
+        result &&
+        typeof result === "object"
+      ) {
+        Object.assign(
+          doneFields,
+          formatStatusFields(result as RunStatusResult),
+        );
       }
       if (
         (req.method === "ticket.start" || req.method === "ticket.resume") &&
@@ -157,7 +171,12 @@ export class ClientConnection {
         });
       }
       logAgentInfo("req.done", doneFields);
-      this.write({ type: "res", id: req.id, ok: true, result });
+      this.write({
+        type: SERVER_MESSAGE_TYPE.RES,
+        id: req.id,
+        ok: true,
+        result,
+      });
     } catch (err) {
       const code =
         err instanceof CoordinatorError || err instanceof ProtocolError
@@ -174,7 +193,7 @@ export class ClientConnection {
       });
       if (err instanceof CoordinatorError || err instanceof ProtocolError) {
         this.write({
-          type: "res",
+          type: SERVER_MESSAGE_TYPE.RES,
           id: req.id,
           ok: false,
           error: { code: err.code, message: err.message },
@@ -182,7 +201,7 @@ export class ClientConnection {
         return;
       }
       this.write({
-        type: "res",
+        type: SERVER_MESSAGE_TYPE.RES,
         id: req.id,
         ok: false,
         error: { code: "INTERNAL_ERROR", message },
@@ -190,7 +209,10 @@ export class ClientConnection {
     }
   }
 
-  private async dispatch(method: string, params: Record<string, unknown>): Promise<unknown> {
+  private async dispatch(
+    method: string,
+    params: Record<string, unknown>,
+  ): Promise<unknown> {
     switch (method) {
       case "agent.register":
         return this.agentRegister(params);
@@ -247,7 +269,9 @@ export class ClientConnection {
     this.focus = {
       agentId,
       ...(issueKey !== undefined ? { issueKey } : {}),
-      ...(issueKey !== undefined ? { threadId: buildThreadId(agentId, issueKey) } : {}),
+      ...(issueKey !== undefined
+        ? { threadId: buildThreadId(agentId, issueKey) }
+        : {}),
     };
 
     if (issueKey) {
@@ -294,11 +318,12 @@ export class ClientConnection {
   private buildStartParams(
     params: Record<string, unknown>,
     issueKey: string,
-    agentId: string
+    agentId: string,
   ): StartRunParams {
     const start: StartRunParams = { issueKey, agentId };
     const scopeParam = optionalString(params, "scope");
-    if (scopeParam === "client" || scopeParam === "server") start.scope = scopeParam;
+    if (scopeParam === "client" || scopeParam === "server")
+      start.scope = scopeParam;
 
     const clientBase = optionalString(params, "clientBase");
     if (clientBase) start.clientBase = clientBase;
@@ -308,8 +333,10 @@ export class ClientConnection {
 
     if (typeof params.dryRun === "boolean") start.dryRun = params.dryRun;
     if (typeof params.verbose === "boolean") start.verbose = params.verbose;
-    if (typeof params.fullSkills === "boolean") start.fullSkills = params.fullSkills;
-    if (typeof params.maxAttempts === "number") start.maxAttempts = params.maxAttempts;
+    if (typeof params.fullSkills === "boolean")
+      start.fullSkills = params.fullSkills;
+    if (typeof params.maxAttempts === "number")
+      start.maxAttempts = params.maxAttempts;
 
     const lint = optionalString(params, "lint");
     if (lint) start.lint = lint;
@@ -326,17 +353,26 @@ export class ClientConnection {
     const message =
       optionalString(params, "message") ??
       (() => {
-        throw new ProtocolError("MISSING_MESSAGE", "message is required for ticket.resume");
+        throw new ProtocolError(
+          "MISSING_MESSAGE",
+          "message is required for ticket.resume",
+        );
       })();
 
     const coordinator = getRunCoordinator();
     this.subscriptions.add(threadId);
-    return coordinator.resume({ threadId, message }, (event) => this.emitRunEvent(event));
+    return coordinator.resume({ threadId, message }, (event) =>
+      this.emitRunEvent(event),
+    );
   }
 
   private async ticketRespond(params: Record<string, unknown>) {
     const threadId = this.resolveThreadId(params);
-    const action = requireString(params, "action") as "approve" | "reject" | "ship" | "comment";
+    const action = requireString(params, "action") as
+      | "approve"
+      | "reject"
+      | "ship"
+      | "comment";
     const text = optionalString(params, "text");
     const gate =
       action === "ship"
@@ -353,7 +389,9 @@ export class ClientConnection {
     const message = actionToMessage(action, text, resolvedGate);
 
     this.subscriptions.add(threadId);
-    return coordinator.resume({ threadId, message }, (event) => this.emitRunEvent(event));
+    return coordinator.resume({ threadId, message }, (event) =>
+      this.emitRunEvent(event),
+    );
   }
 
   private async ticketStatus(params: Record<string, unknown>) {
@@ -386,13 +424,15 @@ export class ClientConnection {
     const explicit = optionalString(params, "threadId");
     if (explicit) return explicit;
 
-    const issueKey = (optionalString(params, "issueKey") ?? this.focus.issueKey)?.toUpperCase();
+    const issueKey = (
+      optionalString(params, "issueKey") ?? this.focus.issueKey
+    )?.toUpperCase();
     const agentId = optionalString(params, "agentId") ?? this.focus.agentId;
 
     if (!issueKey) {
       throw new ProtocolError(
         "MISSING_THREAD",
-        "Provide threadId, issueKey, or session.focus first"
+        "Provide threadId, issueKey, or session.focus first",
       );
     }
 
@@ -419,24 +459,38 @@ export class ClientConnection {
     logAgentInfo(`run.${event.event}`, fields);
     logAgentDebug("run.event", { event: event.event, threadId });
 
-    const payload: EventMessage = { type: "event", event: event.event, data: event.data };
+    const payload: EventMessage = {
+      type: SERVER_MESSAGE_TYPE.EVENT,
+      event: event.event,
+      data: event.data,
+    };
     this.write(payload);
   }
 
-  private write(message: ResponseMessage | EventMessage | { type: "welcome"; version: number; server: string; defaultAgentId: string; repos: { client: string; server: string } }): void {
-    this.socket.write(encodeOutbound(message as Parameters<typeof encodeOutbound>[0]));
+  private write(
+    message: ResponseMessage | EventMessage | WelcomeMessage,
+  ): void {
+    this.socket.write(
+      encodeOutbound(message as Parameters<typeof encodeOutbound>[0]),
+    );
   }
 }
 
 function requireString(params: Record<string, unknown>, key: string): string {
   const value = params[key];
   if (typeof value !== "string" || !value.trim()) {
-    throw new ProtocolError("INVALID_PARAMS", `Missing or invalid param: ${key}`);
+    throw new ProtocolError(
+      "INVALID_PARAMS",
+      `Missing or invalid param: ${key}`,
+    );
   }
   return value.trim();
 }
 
-function optionalString(params: Record<string, unknown>, key: string): string | undefined {
+function optionalString(
+  params: Record<string, unknown>,
+  key: string,
+): string | undefined {
   const value = params[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
