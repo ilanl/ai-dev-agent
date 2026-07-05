@@ -1,4 +1,5 @@
 import { interrupt } from "@langchain/langgraph";
+import { logNodeDone, logNodeStart } from "../../integrations/agent-log.js";
 import {
   parseHumanMessage,
   type ReviewInterruptPayload,
@@ -29,15 +30,18 @@ function buildPlanPayload(state: AgentStateType): ReviewInterruptPayload {
 }
 
 export async function planApproval(state: AgentStateType): Promise<Partial<AgentStateType>> {
+  logNodeStart("planApproval", { threadId: state.threadId, issueKey: state.jiraIssueKey });
   const payload = buildPlanPayload(state);
   const resumeValue = interrupt(payload);
   const decision = parseHumanMessage(String(resumeValue), "plan");
 
   if (decision.action === "approve") {
+    logNodeDone("planApproval", { threadId: state.threadId, decision: "approve" });
     return { planApproved: true, planFeedback: undefined };
   }
 
   if (decision.action === "reject") {
+    logNodeDone("planApproval", { threadId: state.threadId, decision: "reject" });
     return {
       planApproved: false,
       status: "rejected",
@@ -45,6 +49,7 @@ export async function planApproval(state: AgentStateType): Promise<Partial<Agent
     };
   }
 
+  logNodeDone("planApproval", { threadId: state.threadId, decision: "feedback" });
   return {
     planApproved: false,
     planFeedback: decision.text,

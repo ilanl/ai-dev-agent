@@ -9,7 +9,11 @@ import type { AgentStateType } from "./graph/state.js";
 import { getCheckpointer } from "./integrations/checkpointer.js";
 import { teardownAgentRunGit } from "./integrations/agent-worktree.js";
 import { logAgentInfo } from "./integrations/agent-log.js";
-import type { ReviewInterruptPayload } from "./integrations/human-review.js";
+import {
+  formatInterruptNotice,
+  formatPlanReview,
+  type ReviewInterruptPayload,
+} from "./integrations/human-review.js";
 import {
   buildThreadId,
   deleteRunArtifacts,
@@ -201,6 +205,7 @@ export class RunCoordinator {
 
     return this.withThreadLock(params.threadId, async () => {
       emit?.({ event: "run.started", data: { threadId: params.threadId } });
+      console.log(`\n--- resume input (${params.threadId}) ---\n${params.message}`);
 
       try {
         const { state, interrupted, interruptPayload } = await invokeUntilIdle(
@@ -364,6 +369,9 @@ export class RunCoordinator {
   ): RunResult {
     if (interrupted && interruptPayload) {
       const payload = { ...interruptPayload, threadId };
+      const notice =
+        payload.gate === "plan" ? formatPlanReview(payload) : formatInterruptNotice(payload);
+      console.log(notice);
       emit?.({ event: "interrupt", data: payload });
       return {
         threadId,

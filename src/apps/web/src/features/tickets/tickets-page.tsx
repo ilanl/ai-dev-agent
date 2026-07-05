@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ServerDebugPanel } from "./components/server-debug-panel";
 import { TicketsStatusTabs } from "./components/tickets-status-tabs";
 import { TicketsTable } from "./components/tickets-table";
 import { TicketsToolbar } from "./components/tickets-toolbar";
@@ -11,6 +13,7 @@ import { TicketsProvider, useTicketsContext } from "./tickets-context";
 const TicketsLayout = () => {
   const { selectedIssueKey, detail, isDetailLoading } = useTicketsContext();
   const { width: detailWidth, onResizePointerDown } = useDetailPanelWidth();
+  const [logsOpen, setLogsOpen] = useState(false);
   const showDetailPane = isDetailLoading || (selectedIssueKey && detail);
 
   return (
@@ -23,7 +26,10 @@ const TicketsLayout = () => {
             "lg:flex",
           )}
         >
-          <TicketsToolbar />
+          <TicketsToolbar
+            logsOpen={logsOpen}
+            onToggleLogs={() => setLogsOpen((open) => !open)}
+          />
           <TicketsStatusTabs />
           <TicketsTable />
         </div>
@@ -39,6 +45,7 @@ const TicketsLayout = () => {
           </>
         ) : null}
       </div>
+      <ServerDebugPanel open={logsOpen} onClose={() => setLogsOpen(false)} />
     </div>
   );
 };

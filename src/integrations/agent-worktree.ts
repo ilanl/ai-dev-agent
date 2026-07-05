@@ -4,6 +4,14 @@ import { execa } from "execa";
 import { isRepoPath } from "../config/cli-args.js";
 import { resolveRepoPaths } from "../config/server-env.js";
 import type { RepoScope } from "../config/repos.js";
+import {
+  generateBranchCandidates,
+  isBranchNameTakenError,
+  type BranchCandidateOptions,
+} from "./branch-fallback.js";
+import {
+  branchNameTaken,
+} from "./git.js";
 import { parseThreadId, runArtifactsDir } from "./run-registry.js";
 
 export interface AgentWorktreePaths {
@@ -114,25 +122,80 @@ export async function isDetachedAtBase(repoPath: string, baseBranch: string): Pr
   return (await currentBranchName(repoPath)) === null;
 }
 
-export async function createBranchAtHead(
-  repoPath: string,
-  branchName: string
-): Promise<{ success: boolean; error: string | null }> {
-  const existing = await currentBranchName(repoPath);
-  if (existing === branchName) {
-    return { success: true, error: null };
-  }
+/** Reset worktree to detached HEAD at the merge base when needed. */
+export async function ensureDetachedAtBase(repoPath: string, baseBranch: string): Promise<void> {
+  if (await isDetachedAtBase(repoPath, baseBranch)) return;
 
-  const result = await execa("git", ["-C", repoPath, "checkout", "-b", branchName], {
+  const baseRef = await resolveBaseRef(repoPath, baseBranch);
+  const checkout = await execa("git", ["-C", repoPath, "checkout", "--detach", baseRef], {
     reject: false,
   });
 
-  if (result.exitCode === 0) {
-    return { success: true, error: null };
+  if (checkout.exitCode !== 0) {
+    const msg = (checkout.stderr || checkout.stdout || "git checkout --detach failed").trim();
+    throw new Error(`Failed to detach at ${baseBranch}: ${msg}`);
+  }
+}
+
+export type CreateBranchResult = {
+  success: boolean;
+  branchName: string | null;
+  error: string | null;
+  preferredBranch: string;
+  usedFallback: boolean;
+};
+
+export async function createBranchAtHead(
+  repoPath: string,
+  preferredBranch: string,
+  options: BranchCandidateOptions = {},
+): Promise<CreateBranchResult> {
+  const candidates = generateBranchCandidates(preferredBranch, options);
+  const existing = await currentBranchName(repoPath);
+  let lastError: string | null = null;
+
+  for (const candidate of candidates) {
+    if (existing === candidate) {
+      return {
+        success: true,
+        branchName: candidate,
+        error: null,
+        preferredBranch,
+        usedFallback: candidate !== preferredBranch,
+      };
+    }
+
+    if (await branchNameTaken(repoPath, candidate)) {
+      continue;
+    }
+
+    const result = await execa("git", ["-C", repoPath, "checkout", "-b", candidate], {
+      reject: false,
+    });
+
+    if (result.exitCode === 0) {
+      return {
+        success: true,
+        branchName: candidate,
+        error: null,
+        preferredBranch,
+        usedFallback: candidate !== preferredBranch,
+      };
+    }
+
+    lastError = (result.stderr || result.stdout || "git checkout -b failed").trim();
+    if (!isBranchNameTakenError(lastError)) {
+      break;
+    }
   }
 
-  const msg = (result.stderr || result.stdout || "git checkout -b failed").trim();
-  return { success: false, error: msg };
+  return {
+    success: false,
+    branchName: null,
+    error: lastError ?? `No available branch name for ${preferredBranch}`,
+    preferredBranch,
+    usedFallback: false,
+  };
 }
 
 export async function resolveAgentWorktrees(options: {

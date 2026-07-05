@@ -8,4 +8,5 @@ export const API_ROUTES = {
     `/api/tickets/${encodeURIComponent(issueKey)}/resume`,
   ticketReset: (issueKey: string) =>
     `/api/tickets/${encodeURIComponent(issueKey)}/reset`,
+  logsStream: "/api/logs/stream",
 } as const;

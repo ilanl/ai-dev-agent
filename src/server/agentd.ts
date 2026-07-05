@@ -6,6 +6,7 @@ import { dirname } from "node:path";
 import { setDaemonMode } from "../config/daemon-context.js";
 import { loadDeveloperRuntime } from "../config/developer-runtime.js";
 import { loadServerEnv } from "../config/server-env.js";
+import { patchConsoleForAgentLog } from "../integrations/agent-log.js";
 import { startHttpServer } from "./http-api.js";
 import { PROTOCOL_VERSION } from "./protocol.js";
 import { ClientConnection } from "./connection.js";
@@ -45,6 +46,7 @@ function onConnection(socket: Socket): void {
 
 async function main(): Promise<void> {
   setDaemonMode(true);
+  patchConsoleForAgentLog();
   const env = loadServerEnv();
   const httpPort = Number(process.env.AGENT_HTTP_PORT ?? DEFAULT_HTTP_PORT);
 

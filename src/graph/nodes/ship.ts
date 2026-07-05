@@ -1,4 +1,5 @@
 import { buildCommitSubject, slugFromBranch } from "../../config/repos.js";
+import { logNodeDone, logNodeStart } from "../../integrations/agent-log.js";
 import {
   branchExistsOnRemote,
   commitAndPush,
@@ -11,10 +12,12 @@ import { jiraCodeReview } from "../../integrations/ticket-solver.js";
 import type { AgentStateType } from "../state.js";
 
 export async function ship(state: AgentStateType): Promise<Partial<AgentStateType>> {
+  logNodeStart("ship", { threadId: state.threadId, issueKey: state.jiraIssueKey });
   const changed = await hasChanges(state.activeRepoPath);
   const onRemote = await branchExistsOnRemote(state.activeRepoPath, state.branchName);
 
   if (!changed && !onRemote) {
+    logNodeDone("ship", { threadId: state.threadId, status: "failed", error: "no changes" });
     return {
       status: "failed",
       error: "No changes to ship",
@@ -62,6 +65,13 @@ export async function ship(state: AgentStateType): Promise<Partial<AgentStateTyp
   });
 
   await jiraCodeReview(state.jiraIssueKey);
+
+  logNodeDone("ship", {
+    threadId: state.threadId,
+    status: "shipped",
+    branch: state.branchName,
+    mr: mr.url,
+  });
 
   return {
     filesChanged,

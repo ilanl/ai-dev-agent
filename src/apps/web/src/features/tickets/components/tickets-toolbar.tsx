@@ -1,9 +1,14 @@
-import { Plus, Search } from "@/components/icons";
+import { Plus, Search, Terminal } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTicketsContext } from "../tickets-context";
 
-export const TicketsToolbar = () => {
+type TicketsToolbarProps = {
+  logsOpen: boolean;
+  onToggleLogs: () => void;
+};
+
+export const TicketsToolbar = ({ logsOpen, onToggleLogs }: TicketsToolbarProps) => {
   const { search, setSearch, startNewTicket, isStarting } = useTicketsContext();
 
   return (
@@ -21,6 +26,14 @@ export const TicketsToolbar = () => {
           className="pl-8"
         />
       </div>
+      <Button
+        variant={logsOpen ? "secondary" : "outline"}
+        className="ml-auto shrink-0"
+        onClick={onToggleLogs}
+      >
+        <Terminal data-icon="inline-start" />
+        Live logs
+      </Button>
     </div>
   );
 };

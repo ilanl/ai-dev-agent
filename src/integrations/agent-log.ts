@@ -1,10 +1,18 @@
+import { format } from "node:util";
 import type { RunStatusResult } from "../run-coordinator.js";
+import { publishAgentLog, type AgentLogLine } from "./agent-log-bus.js";
 
 const PREFIX = "[agentd]";
 
 export type AgentLogLevel = "off" | "info" | "debug";
 
 let level: AgentLogLevel = resolveLogLevel();
+
+const origLog = console.log.bind(console);
+const origError = console.error.bind(console);
+const origWarn = console.warn.bind(console);
+
+let consolePatched = false;
 
 function resolveLogLevel(): AgentLogLevel {
   const raw = process.env.AGENT_LOG_LEVEL?.trim().toLowerCase();
@@ -20,10 +28,53 @@ function fmt(fields: Record<string, unknown>): string {
     .join(" ");
 }
 
+function formatConsoleArgs(args: unknown[]): string {
+  if (!args.length) return "";
+  return format(...args);
+}
+
+function publishLine(event: string, logLevel: AgentLogLine["level"], message: string): void {
+  if (level === "off" || !message) return;
+  publishAgentLog({
+    ts: new Date().toISOString(),
+    level: logLevel,
+    event,
+    message,
+  });
+}
+
+function publishConsole(event: string, logLevel: AgentLogLine["level"], args: unknown[]): void {
+  const message = formatConsoleArgs(args);
+  if (!message) return;
+  publishLine(event, logLevel, message);
+}
+
 function write(event: string, fields: Record<string, unknown>, minLevel: AgentLogLevel): void {
   if (level === "off") return;
   if (minLevel === "debug" && level !== "debug") return;
-  console.log(`${PREFIX} ${event} ${fmt(fields)}`);
+  const message = `${PREFIX} ${event} ${fmt(fields)}`;
+  origLog(message);
+  publishLine(event, minLevel === "debug" ? "debug" : "info", message);
+}
+
+export function patchConsoleForAgentLog(): void {
+  if (consolePatched) return;
+  consolePatched = true;
+
+  console.log = (...args: unknown[]) => {
+    origLog(...args);
+    publishConsole("console.log", "info", args);
+  };
+
+  console.error = (...args: unknown[]) => {
+    origError(...args);
+    publishConsole("console.error", "info", args);
+  };
+
+  console.warn = (...args: unknown[]) => {
+    origWarn(...args);
+    publishConsole("console.warn", "info", args);
+  };
 }
 
 export function logAgentInfo(event: string, fields: Record<string, unknown> = {}): void {

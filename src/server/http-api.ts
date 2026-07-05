@@ -12,6 +12,8 @@ import {
   type TicketListItem,
 } from "../contract/index.js";
 import { defaultAgentId } from "../config/cli-args.js";
+import { logAgentInfo } from "../integrations/agent-log.js";
+import { handleLogsStream } from "./log-stream.js";
 import { actionToMessage } from "../integrations/respond.js";
 import { buildThreadId } from "../integrations/run-registry.js";
 import { getJira } from "../integrations/ticket-solver.js";
@@ -294,6 +296,11 @@ const route = async (
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
   const agentId = resolveAgentId(url.searchParams.get("agentId") ?? undefined);
 
+  if (req.method === "GET" && url.pathname === API_ROUTES.logsStream) {
+    handleLogsStream(req, res);
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === API_ROUTES.tickets) {
     await handleList(req, res, agentId);
     return;
@@ -354,7 +361,7 @@ export const startHttpServer = (port = Number(process.env.AGENT_HTTP_PORT ?? DEF
   });
 
   server.listen(port, "127.0.0.1", () => {
-    console.log(`http api listening on http://127.0.0.1:${port}`);
+    logAgentInfo("http.listening", { port });
   });
 
   return server;

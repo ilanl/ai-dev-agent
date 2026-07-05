@@ -75,6 +75,26 @@ export async function branchExistsOnRemote(
   return result.exitCode === 0 && result.stdout.trim().length > 0;
 }
 
+export async function localBranchExists(
+  repoPath: string,
+  branchName: string,
+): Promise<boolean> {
+  const result = await execa(
+    "git",
+    ["-C", repoPath, "rev-parse", "--verify", `refs/heads/${branchName}`],
+    { reject: false },
+  );
+  return result.exitCode === 0;
+}
+
+export async function branchNameTaken(
+  repoPath: string,
+  branchName: string,
+): Promise<boolean> {
+  if (await localBranchExists(repoPath, branchName)) return true;
+  return branchExistsOnRemote(repoPath, branchName);
+}
+
 export async function getFilesChangedSinceBase(
   repoPath: string,
   baseBranch: string

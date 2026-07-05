@@ -1,5 +1,4 @@
 import { execa } from "execa";
-import { isDaemonMode } from "../config/daemon-context.js";
 import { loadDeveloperRuntime } from "../config/developer-runtime.js";
 import { isVerbose, writeVerbose } from "../config/verbosity.js";
 import type { CodexRunOptions, CodexRunResult } from "./codex.js";
@@ -110,9 +109,7 @@ export async function runCursorAgent(options: CodexRunOptions): Promise<CodexRun
             ? "Cursor Agent returned a JSON envelope instead of plan text."
             : undefined)
     );
-    if (!isDaemonMode()) {
-      console.error(`\nCursor Agent failed:\n${detail}\n`);
-    }
+    console.error(`\nCursor Agent failed:\n${detail}\n`);
     const result: CodexRunResult = {
       output: detail,
       blocked: false,

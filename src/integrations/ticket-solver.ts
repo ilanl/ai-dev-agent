@@ -75,8 +75,13 @@ export async function createBranches(options: {
     args.push("--server-branch", options.serverPath, "--server-base", options.serverBase);
   }
 
-  const { stdout } = await execa(JIRA_COMMAND, args);
-  return JSON.parse(stdout) as TicketSolverBranchResult;
+  const result = await execa(JIRA_COMMAND, args, { reject: false });
+  if (result.exitCode !== 0) {
+    const err = (result.stderr || result.stdout || "ticket-solver branch creation failed").trim();
+    throw new Error(err);
+  }
+
+  return JSON.parse(result.stdout) as TicketSolverBranchResult;
 }
 
 export async function jiraCodeReview(issueKey: string): Promise<unknown> {

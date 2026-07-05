@@ -16,9 +16,9 @@ export function logAlways(...args: unknown[]): void {
   console.log(...args);
 }
 
-/** One-line progress (suppressed in agentd — consumer shows output) */
+/** One-line progress */
 export function logStep(message: string): void {
-  if (!isDaemonMode()) console.log(message);
+  console.log(message);
 }
 
 /** Detailed output only with --verbose / AGENT_VERBOSE=1 */

@@ -1,10 +1,11 @@
 import { isRepoPath } from "../../config/cli-args.js";
-import { logNodeDone, logNodeStart } from "../../integrations/agent-log.js";
+import { logAgentInfo, logNodeDone, logNodeStart } from "../../integrations/agent-log.js";
 import {
   createBranchAtHead,
-  isDetachedAtBase,
+  ensureDetachedAtBase,
   resolveAgentWorktrees,
 } from "../../integrations/agent-worktree.js";
+import { isBranchNameTakenError } from "../../integrations/branch-fallback.js";
 import { createBranches } from "../../integrations/ticket-solver.js";
 import type { AgentStateType } from "../state.js";
 
@@ -37,8 +38,8 @@ export async function prepareWorktree(state: AgentStateType): Promise<Partial<Ag
     branchArgs.serverBase = state.serverBase;
   }
 
-  const branchName = state.branchName || state.jira?.suggestedBranch;
-  if (!branchName) {
+  const preferredBranch = state.branchName || state.jira?.suggestedBranch;
+  if (!preferredBranch) {
     throw new Error("Missing suggested branch name (expected from fetchJira)");
   }
 
@@ -46,21 +47,73 @@ export async function prepareWorktree(state: AgentStateType): Promise<Partial<Ag
   const worktreePath = state.scope === "client" ? worktrees.clientPath : worktrees.serverPath;
   const baseBranch = state.scope === "client" ? state.clientBase! : state.serverBase!;
   const usingAgentWorktree = worktreePath !== mainRepoPath;
+  const branchOptions = {
+    agentId: state.agentId,
+    issueKey: state.jiraIssueKey,
+  };
 
   let repoPath = worktreePath;
+  let resolvedBranch = preferredBranch;
   let branchCreateError: string | null = null;
 
-  if (usingAgentWorktree && (await isDetachedAtBase(worktreePath, baseBranch))) {
-    const created = await createBranchAtHead(worktreePath, branchName);
-    if (!created.success) {
-      branchCreateError = created.error;
+  const applyBranchResult = (
+    result: Awaited<ReturnType<typeof createBranchAtHead>>,
+  ): boolean => {
+    if (!result.success || !result.branchName) {
+      branchCreateError = result.error;
+      return false;
+    }
+
+    resolvedBranch = result.branchName;
+    if (result.usedFallback) {
+      logAgentInfo("branch.fallback", {
+        threadId: state.threadId,
+        preferred: preferredBranch,
+        branch: resolvedBranch,
+      });
+    }
+    return true;
+  };
+
+  const createBranchWithFallbacks = async (targetRepo: string): Promise<boolean> => {
+    await ensureDetachedAtBase(targetRepo, baseBranch);
+    return applyBranchResult(
+      await createBranchAtHead(targetRepo, preferredBranch, branchOptions),
+    );
+  };
+
+  if (usingAgentWorktree) {
+    if (!(await createBranchWithFallbacks(worktreePath))) {
+      branchCreateError ??= "Branch creation failed in agent worktree";
     }
   } else {
-    const result = await createBranches(branchArgs);
-    const op = result.operations.find((o) => o.role === state.scope);
-    repoPath = op?.repoPath ?? worktreePath;
-    if (!op?.branchCreate.success) {
-      branchCreateError = op?.branchCreate.error ?? "unknown error";
+    let ticketSolverFailed = false;
+
+    try {
+      const result = await createBranches(branchArgs);
+      const op = result.operations.find((o) => o.role === state.scope);
+      repoPath = op?.repoPath ?? worktreePath;
+
+      if (op?.branchCreate.success) {
+        resolvedBranch = op.suggestedBranch || preferredBranch;
+      } else {
+        ticketSolverFailed = true;
+        branchCreateError = op?.branchCreate.error ?? "unknown error";
+      }
+    } catch (err) {
+      ticketSolverFailed = true;
+      branchCreateError = err instanceof Error ? err.message : String(err);
+    }
+
+    if (ticketSolverFailed) {
+      const shouldFallback =
+        !branchCreateError || isBranchNameTakenError(branchCreateError);
+      if (shouldFallback) {
+        branchCreateError = null;
+        if (!(await createBranchWithFallbacks(repoPath))) {
+          branchCreateError ??= "Branch creation failed after ticket-solver error";
+        }
+      }
     }
   }
 
@@ -70,15 +123,16 @@ export async function prepareWorktree(state: AgentStateType): Promise<Partial<Ag
 
   logNodeDone("prepareWorktree", {
     threadId: state.threadId,
-    branch: branchName,
+    branch: resolvedBranch,
     repo: repoPath,
+    ...(resolvedBranch !== preferredBranch ? { preferredBranch } : {}),
   });
 
   return {
     clientPath: worktrees.clientPath,
     serverPath: worktrees.serverPath,
     worktreeRoot: worktrees.worktreeRoot,
-    branchName,
+    branchName: resolvedBranch,
     baseBranch,
     activeRepoPath: repoPath,
   };

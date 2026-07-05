@@ -6,7 +6,9 @@ export {
   MoreVertical,
   Paperclip,
   Plus,
+  RefreshCw,
   Search,
   Send,
+  Terminal,
   X,
 } from "lucide-react";

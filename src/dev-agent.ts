@@ -3,6 +3,7 @@ import { parseCliArgs } from "./config/cli-args.js";
 import { resolveRepoPaths } from "./config/server-env.js";
 import { setVerbose } from "./config/verbosity.js";
 import { printInterrupt } from "./agent-runner.js";
+import { patchConsoleForAgentLog } from "./integrations/agent-log.js";
 import { promptAnswer } from "./integrations/human-gate.js";
 import {
   formatInterruptNotice,
@@ -281,6 +282,7 @@ async function runViaDaemon(
 }
 
 async function runLocal(cli: ReturnType<typeof parseCliArgs>): Promise<number> {
+  patchConsoleForAgentLog();
   setVerbose(cli.verbose);
   const coordinator = getRunCoordinator();
   const threadId = buildThreadId(cli.agentId, cli.issueKey);

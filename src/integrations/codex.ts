@@ -2,7 +2,6 @@ import { execa } from "execa";
 import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isDaemonMode } from "../config/daemon-context.js";
 import { isVerbose, writeVerbose } from "../config/verbosity.js";
 
 export type CodexSandbox = "read-only" | "workspace-write";
@@ -114,9 +113,7 @@ export async function runCodex(options: CodexRunOptions): Promise<CodexRunResult
 
   if (exitCode !== 0) {
     const detail = formatCodexFailure(exitCode, output, combined, stderrText);
-    if (!isDaemonMode()) {
-      console.error(`\nCodex failed:\n${detail}\n`);
-    }
+    console.error(`\nCodex failed:\n${detail}\n`);
     const failed: CodexRunResult = {
       output: detail,
       blocked: false,
