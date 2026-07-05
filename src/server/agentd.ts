@@ -63,13 +63,19 @@ async function main(): Promise<void> {
     );
   }
 
-  console.log(`repos: client=${env.clientRepoPath} server=${env.serverRepoPath}`);
+  console.log(
+    `repos: client=${env.clientRepoPath} server=${env.serverRepoPath}`,
+  );
   const devRuntime = loadDeveloperRuntime();
   console.log(
     `developer runtime=${devRuntime.runtime}` +
-      (devRuntime.runtime === "cursor" ? ` bin=${devRuntime.cursorAgentBin}` : ""),
+      (devRuntime.runtime === "cursor"
+        ? ` bin=${devRuntime.cursorAgentBin}`
+        : ""),
   );
-  console.log(`agentd log level=${process.env.AGENT_LOG_LEVEL?.trim() || "info"}`);
+  console.log(
+    `agentd log level=${process.env.AGENT_LOG_LEVEL?.trim() || "info"}`,
+  );
 }
 
 function shutdown(): void {
