@@ -109,6 +109,15 @@ button.danger {
   background: #8b2e2e;
 }
 
+button.secondary {
+  background: #2a2f3a;
+  color: #e8eaed;
+}
+
+button.secondary:hover:not(:disabled) {
+  background: #353b48;
+}
+
 .banner {
   padding: 0.5rem 1rem;
   background: #3d2f00;
@@ -256,6 +265,18 @@ button.danger {
 .badge.busy {
   background: #1a3050;
   color: #5dade2;
+}
+
+.status-line {
+  margin: 0 0 1rem;
+  color: #b8bcc4;
+  font-size: 0.95rem;
+}
+
+.hint {
+  margin: 0;
+  color: #5dade2;
+  font-size: 0.9rem;
 }
 
 .meta {

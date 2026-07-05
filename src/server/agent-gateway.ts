@@ -156,6 +156,17 @@ export class AgentGateway {
     });
   }
 
+  async getTicketSummary(threadId: string): Promise<TicketSummary | null> {
+    return this.run(async (client) => {
+      const res = await client.request<TicketSummary>("ticket.summary", { threadId });
+      if (!res.ok) {
+        if (res.error?.code === "NOT_FOUND") return null;
+        throw new Error(res.error?.message ?? "ticket.summary failed");
+      }
+      return res.result as TicketSummary;
+    });
+  }
+
   async reset(issueKey: string, agentId?: string): Promise<ResetResult> {
     return this.run(async (client) => {
       const res = await client.request<ResetResult>("ticket.reset", {

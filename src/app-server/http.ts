@@ -94,8 +94,8 @@ export function createDashboardServer(
         }
 
         if (action === "start" && req.method === "POST") {
-          const result = await bridge.startTicket(issueKey);
-          json(res, 200, result);
+          const { result, ticket } = await bridge.startTicket(issueKey);
+          json(res, 200, { ...result, ticket });
           return;
         }
 
@@ -105,8 +105,8 @@ export function createDashboardServer(
             json(res, 400, { error: "message is required" });
             return;
           }
-          const result = await bridge.resumeTicket(issueKey, body.message.trim());
-          json(res, 200, result);
+          const { result, ticket } = await bridge.resumeTicket(issueKey, body.message.trim());
+          json(res, 200, { ...result, ticket });
           return;
         }
 
@@ -121,12 +121,12 @@ export function createDashboardServer(
             json(res, 400, { error: "text is required for comment" });
             return;
           }
-          const result = await bridge.respondTicket(
+          const { result, ticket } = await bridge.respondTicket(
             issueKey,
             respondAction,
             body.text?.trim()
           );
-          json(res, 200, result);
+          json(res, 200, { ...result, ticket });
           return;
         }
 

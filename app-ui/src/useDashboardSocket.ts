@@ -6,6 +6,16 @@ type WsMessage =
   | { type: "agent.changed"; data: { agentId: string } }
   | { type: "run.event"; data: unknown };
 
+const DEV_WS_URL = "ws://127.0.0.1:9478/ws";
+const MIN_RETRY_MS = 1000;
+const MAX_RETRY_MS = 30_000;
+
+function wsUrl(): string {
+  if (import.meta.env.DEV) return DEV_WS_URL;
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/ws`;
+}
+
 export function useDashboardSocket(options: {
   onTicketUpdated: (ticket: TicketSummary) => void;
   onAgentChanged: (agentId: string) => void;
@@ -19,17 +29,33 @@ export function useDashboardSocket(options: {
     let ws: WebSocket | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let closed = false;
+    let retryAttempt = 0;
+    let hadDisconnect = false;
+
+    const scheduleReconnect = () => {
+      const delay = Math.min(MIN_RETRY_MS * 2 ** retryAttempt, MAX_RETRY_MS);
+      retryAttempt += 1;
+      retryTimer = setTimeout(connect, delay);
+    };
 
     const connect = () => {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const url = `${protocol}//${window.location.host}/ws`;
-      ws = new WebSocket(url);
+      ws = new WebSocket(wsUrl());
 
-      ws.onopen = () => setConnected(true);
+      ws.onopen = () => {
+        setConnected(true);
+        retryAttempt = 0;
+        if (hadDisconnect) {
+          hadDisconnect = false;
+          optionsRef.current.onReconnect?.();
+        }
+      };
+
       ws.onclose = () => {
         setConnected(false);
-        if (!closed) retryTimer = setTimeout(connect, 2000);
+        hadDisconnect = true;
+        if (!closed) scheduleReconnect();
       };
+
       ws.onerror = () => ws?.close();
 
       ws.onmessage = (event) => {
@@ -39,8 +65,6 @@ export function useDashboardSocket(options: {
             optionsRef.current.onTicketUpdated(msg.data);
           } else if (msg.type === "agent.changed") {
             optionsRef.current.onAgentChanged(msg.data.agentId);
-          } else if (msg.type === "run.event") {
-            optionsRef.current.onReconnect?.();
           }
         } catch {
           // ignore malformed

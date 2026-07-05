@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import type { RespondAction } from "../integrations/respond.js";
+import type { RunResult } from "../run-coordinator.js";
 import { AgentGateway } from "../server/agent-gateway.js";
 import type { TicketSummary } from "../server/ticket-views.js";
 import type { EventMessage } from "../server/protocol.js";
@@ -9,6 +10,11 @@ export type WsOutbound =
   | { type: "run.event"; data: EventMessage }
   | { type: "agent.changed"; data: { agentId: string } }
   | { type: "error"; data: { message: string } };
+
+export type TicketActionResult = {
+  result: RunResult;
+  ticket: TicketSummary | null;
+};
 
 export class DashboardBridge {
   private gateway: AgentGateway;
@@ -60,10 +66,9 @@ export class DashboardBridge {
     const data = event.data as { threadId?: string };
     if (!data.threadId) return;
     try {
-      const tickets = await this.gateway.listWithStatus(this.agentId);
-      const match = tickets.find((t) => t.threadId === data.threadId);
-      if (match) {
-        this.broadcast({ type: "ticket.updated", data: match });
+      const ticket = await this.gateway.getTicketSummary(data.threadId);
+      if (ticket) {
+        this.broadcast({ type: "ticket.updated", data: ticket });
       }
     } catch {
       // agentd may be briefly busy
@@ -93,30 +98,36 @@ export class DashboardBridge {
   }
 
   async getTicket(issueKey: string): Promise<TicketSummary | null> {
-    const tickets = await this.gateway.listWithStatus(this.agentId);
-    return tickets.find((t) => t.issueKey === issueKey.toUpperCase()) ?? null;
+    const threadId = this.gateway.threadId(issueKey, this.agentId);
+    return this.gateway.getTicketSummary(threadId);
   }
 
-  async startTicket(issueKey: string) {
+  async startTicket(issueKey: string): Promise<TicketActionResult> {
     const result = await this.gateway.start(issueKey, this.agentId);
     await this.gateway.subscribe([result.threadId]);
-    const ticket = await this.getTicket(issueKey);
+    const ticket = await this.gateway.getTicketSummary(result.threadId);
     if (ticket) this.broadcast({ type: "ticket.updated", data: ticket });
-    return result;
+    return { result, ticket };
   }
 
-  async resumeTicket(issueKey: string, message: string) {
+  async resumeTicket(issueKey: string, message: string): Promise<TicketActionResult> {
     const result = await this.gateway.resume(issueKey, message, this.agentId);
-    const ticket = await this.getTicket(issueKey);
+    const threadId = this.gateway.threadId(issueKey, this.agentId);
+    const ticket = await this.gateway.getTicketSummary(threadId);
     if (ticket) this.broadcast({ type: "ticket.updated", data: ticket });
-    return result;
+    return { result, ticket };
   }
 
-  async respondTicket(issueKey: string, action: RespondAction, text?: string) {
+  async respondTicket(
+    issueKey: string,
+    action: RespondAction,
+    text?: string
+  ): Promise<TicketActionResult> {
     const result = await this.gateway.respond(issueKey, action, text, this.agentId);
-    const ticket = await this.getTicket(issueKey);
+    const threadId = this.gateway.threadId(issueKey, this.agentId);
+    const ticket = await this.gateway.getTicketSummary(threadId);
     if (ticket) this.broadcast({ type: "ticket.updated", data: ticket });
-    return result;
+    return { result, ticket };
   }
 
   async resetTicket(issueKey: string) {

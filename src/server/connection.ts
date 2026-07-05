@@ -6,7 +6,7 @@ import {
   logAgentDebug,
   logAgentInfo,
 } from "../integrations/agent-log.js";
-import { buildThreadId } from "../integrations/run-registry.js";
+import { buildThreadId, loadRunMeta } from "../integrations/run-registry.js";
 import { actionToMessage } from "../integrations/respond.js";
 import {
   CoordinatorError,
@@ -25,6 +25,7 @@ import {
   type ResponseMessage,
 } from "./protocol.js";
 import type { RunResult, StartRunParams } from "../run-coordinator.js";
+import { mergeTicketSummary } from "./ticket-views.js";
 
 export interface SessionFocus {
   agentId: string;
@@ -214,6 +215,8 @@ export class ClientConnection {
         return this.ticketList(params);
       case "ticket.listWithStatus":
         return this.ticketListWithStatus(params);
+      case "ticket.summary":
+        return this.ticketSummary(params);
       case "ticket.reset":
         return this.ticketReset(params);
       default:
@@ -377,6 +380,17 @@ export class ClientConnection {
   private async ticketListWithStatus(params: Record<string, unknown>) {
     const agentId = optionalString(params, "agentId") ?? this.focus.agentId;
     return getRunCoordinator().listWithStatus(agentId);
+  }
+
+  private async ticketSummary(params: Record<string, unknown>) {
+    const threadId = this.resolveThreadId(params);
+    const meta = await loadRunMeta(threadId);
+    if (!meta) {
+      throw new ProtocolError("NOT_FOUND", `No run for thread ${threadId}`);
+    }
+    const coordinator = getRunCoordinator();
+    const status = await coordinator.status(threadId);
+    return mergeTicketSummary(meta, status, coordinator.isThreadBusy(threadId));
   }
 
   private async ticketReset(params: Record<string, unknown>) {

@@ -1,12 +1,15 @@
 import type { TicketSummary } from "../types";
+import { formatTicketStatus } from "../ticketStatus";
 import { ActionBar } from "./ActionBar";
 
 interface Props {
   ticket: TicketSummary | null;
-  onAction: () => void;
+  onTicketUpdated: (ticket: TicketSummary) => void;
+  actingThreadId: string | null;
+  onActingChange: (threadId: string, acting: boolean) => void;
 }
 
-export function TicketDetail({ ticket, onAction }: Props) {
+export function TicketDetail({ ticket, onTicketUpdated, actingThreadId, onActingChange }: Props) {
   if (!ticket) {
     return (
       <div className="detail empty">
@@ -25,6 +28,8 @@ export function TicketDetail({ ticket, onAction }: Props) {
         {ticket.awaiting && <span className="badge awaiting">{ticket.awaiting}</span>}
         {ticket.busy && <span className="badge busy">running</span>}
       </header>
+
+      <p className="status-line">{formatTicketStatus(ticket)}</p>
 
       <dl className="meta">
         <dt>Thread</dt>
@@ -78,7 +83,13 @@ export function TicketDetail({ ticket, onAction }: Props) {
         </section>
       )}
 
-      <ActionBar ticket={ticket} onAction={onAction} />
+      <ActionBar
+        key={ticket.threadId}
+        ticket={ticket}
+        onTicketUpdated={onTicketUpdated}
+        isActing={actingThreadId === ticket.threadId}
+        onActingChange={(acting) => onActingChange(ticket.threadId, acting)}
+      />
     </div>
   );
 }

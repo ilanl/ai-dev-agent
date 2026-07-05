@@ -59,6 +59,7 @@ NDJSON over Unix socket (default `.agent-runs/agent.sock`). Methods:
 | `ticket.reset` | Delete checkpoint, meta, and artifacts for thread |
 | `ticket.list` | List runs for agent |
 | `ticket.listWithStatus` | List runs with live status, phase, and awaiting gate |
+| `ticket.summary` | Single run with live status and busy flag `{ threadId }` |
 | `session.focus` | Switch active `{ agentId, issueKey? }` |
 | `session.current` | Current focus |
 | `agent.register` | Register agent slot |
@@ -105,4 +106,4 @@ npm run dashboard:dev
 | `DASHBOARD_PORT` | HTTP + WebSocket port (default `9478`) |
 | `DASHBOARD_AGENT_ID` | Default agent in picker |
 
-See [docs/cursor-cli-migration-plan.md](docs/cursor-cli-migration-plan.md) and [docs/v1-implementation-plan.md](docs/v1-implementation-plan.md).
+See [docs/dashboard-plan.md](docs/dashboard-plan.md) (operator runbook + improvement roadmap), [docs/cursor-cli-migration-plan.md](docs/cursor-cli-migration-plan.md), and [docs/v1-implementation-plan.md](docs/v1-implementation-plan.md).

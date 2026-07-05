@@ -10,6 +10,7 @@ import {
 import { TicketDetail } from "./components/TicketDetail";
 import { TicketInbox } from "./components/TicketInbox";
 import type { AgentRecord, TicketPhase, TicketSummary } from "./types";
+import { formatApiError } from "./ticketStatus";
 import { useDashboardSocket } from "./useDashboardSocket";
 import "./App.css";
 
@@ -23,17 +24,26 @@ export function App() {
   const [filter, setFilter] = useState<Filter>("needs_you");
   const [agentdOk, setAgentdOk] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newTicket, setNewTicket] = useState("");
   const [starting, setStarting] = useState(false);
+  const [actingThreadId, setActingThreadId] = useState<string | null>(null);
+  const handleActingChange = useCallback((threadId: string, acting: boolean) => {
+    if (acting) {
+      setActingThreadId(threadId);
+      return;
+    }
+    setActingThreadId((prev) => (prev === threadId ? null : prev));
+  }, []);
 
   const selected = useMemo(
     () => tickets.find((t) => t.issueKey === selectedKey) ?? null,
     [tickets, selectedKey]
   );
 
-  const load = useCallback(async () => {
-    setError(null);
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setError(null);
     try {
       const health = await fetchHealth();
       setAgentdOk(health.agentd === "ok");
@@ -46,10 +56,11 @@ export function App() {
       setAgentId(data.agentId);
       setTickets(data.tickets);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatApiError(err));
       setAgentdOk(false);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -67,23 +78,33 @@ export function App() {
     });
   }, []);
 
+  const removeTicket = useCallback((issueKey: string) => {
+    setTickets((prev) => prev.filter((t) => t.issueKey !== issueKey));
+  }, []);
+
   const { connected } = useDashboardSocket({
     onTicketUpdated: patchTicket,
     onAgentChanged: (id) => {
       setAgentId(id);
-      void load();
+      void load({ silent: true });
     },
-    onReconnect: () => void load(),
+    onReconnect: () => void load({ silent: true }),
   });
 
+  function handleRefresh() {
+    setRefreshing(true);
+    void load();
+  }
+
   async function handleAgentChange(id: string) {
+    setActingThreadId(null);
     setLoading(true);
     try {
       await setAgent(id);
       setAgentId(id);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatApiError(err));
     } finally {
       setLoading(false);
     }
@@ -98,12 +119,13 @@ export function App() {
     setStarting(true);
     setError(null);
     try {
-      await startTicket(key);
+      const { ticket } = await startTicket(key);
       setNewTicket("");
       setSelectedKey(key);
-      await load();
+      if (ticket) patchTicket(ticket);
+      else await load({ silent: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatApiError(err));
     } finally {
       setStarting(false);
     }
@@ -114,10 +136,10 @@ export function App() {
     if (!window.confirm(`Reset ${selectedKey}? This clears checkpoint and artifacts.`)) return;
     try {
       await resetTicket(selectedKey);
+      removeTicket(selectedKey);
       setSelectedKey(null);
-      await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatApiError(err));
     }
   }
 
@@ -135,6 +157,15 @@ export function App() {
           <span className={`dot ${agentdOk ? "ok" : "down"}`} title={agentdOk ? "agentd ok" : "agentd down"} />
           <span className={`ws ${connected ? "ok" : ""}`}>{connected ? "live" : "reconnecting…"}</span>
         </div>
+
+        <button
+          className="secondary"
+          onClick={handleRefresh}
+          disabled={loading || refreshing}
+          title={connected ? "Refresh inbox" : "WebSocket disconnected — refresh inbox"}
+        >
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
 
         <label className="agent-picker">
           Agent
@@ -170,6 +201,12 @@ export function App() {
         </div>
       )}
 
+      {!connected && agentdOk && (
+        <div className="banner">
+          Live updates disconnected — inbox may be stale. Click <strong>Refresh</strong> or reload the page.
+        </div>
+      )}
+
       {error && <div className="banner error">{error}</div>}
 
       <main className="layout">
@@ -181,7 +218,12 @@ export function App() {
           onSelect={setSelectedKey}
         />
         <div className="detail-pane">
-          <TicketDetail ticket={selected} onAction={() => void load()} />
+          <TicketDetail
+            ticket={selected}
+            onTicketUpdated={patchTicket}
+            actingThreadId={actingThreadId}
+            onActingChange={handleActingChange}
+          />
           {selected && (
             <footer className="detail-footer">
               <button className="danger" onClick={() => void handleReset()}>

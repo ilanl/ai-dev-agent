@@ -27,8 +27,10 @@ export function deriveTicketPhase(
   status: RunStatusResult,
   busy: boolean
 ): TicketPhase {
+  // A busy thread is actively running — stale checkpoint interrupts must not show as needs_you.
+  if (busy) return "running";
   if (status.awaiting) return "needs_you";
-  if (busy || status.next.length > 0) return "running";
+  if (status.next.length > 0) return "running";
   if (status.status && DONE_STATUSES.has(status.status)) return "done";
   if (status.next.length === 0 && !status.status) return "idle";
   if (status.next.length === 0) return "done";
@@ -62,8 +64,8 @@ export function mergeTicketSummary(
   if (status.branchName) summary.branchName = status.branchName;
   if (status.planPath) summary.planPath = status.planPath;
   if (status.activeRepoPath) summary.activeRepoPath = status.activeRepoPath;
-  if (status.awaiting) summary.awaiting = status.awaiting;
-  if (status.interrupt) summary.interrupt = status.interrupt;
+  if (!busy && status.awaiting) summary.awaiting = status.awaiting;
+  if (!busy && status.interrupt) summary.interrupt = status.interrupt;
 
   return summary;
 }

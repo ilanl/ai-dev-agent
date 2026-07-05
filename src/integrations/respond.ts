@@ -5,11 +5,12 @@ import type { ReviewGate } from "./human-review.js";
 export function actionToMessage(
   action: RespondAction,
   text: string | undefined,
-  _gate: ReviewGate
+  gate: ReviewGate
 ): string {
   switch (action) {
     case "approve":
-      return "approve";
+      // Plan gate only accepts "implement" as approval (see parseHumanMessage).
+      return gate === "plan" ? "implement" : "approve";
     case "reject":
       return "reject";
     case "ship":

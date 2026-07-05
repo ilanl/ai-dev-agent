@@ -1,41 +1,63 @@
 import { useState } from "react";
 import type { TicketSummary } from "../types";
 import { respondTicket, resumeTicket } from "../api";
+import { formatApiError, formatBusyMessage } from "../ticketStatus";
 
 interface Props {
   ticket: TicketSummary;
-  onAction: () => void;
+  onTicketUpdated: (ticket: TicketSummary) => void;
+  isActing: boolean;
+  onActingChange: (acting: boolean) => void;
   disabled?: boolean;
 }
 
-export function ActionBar({ ticket, onAction, disabled }: Props) {
+function WorkingHint({ message }: { message: string }) {
+  return <p className="hint">{message}</p>;
+}
+
+export function ActionBar({
+  ticket,
+  onTicketUpdated,
+  isActing,
+  onActingChange,
+  disabled,
+}: Props) {
   const [comment, setComment] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const busy = disabled || loading || ticket.busy;
+  const blocked = disabled || ticket.busy;
 
-  async function run(fn: () => Promise<unknown>) {
-    setLoading(true);
+  async function run(fn: () => Promise<{ ticket: TicketSummary | null }>) {
+    onActingChange(true);
     setError(null);
     try {
-      await fn();
+      const { ticket: updated } = await fn();
       setComment("");
-      onAction();
+      if (updated) onTicketUpdated(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatApiError(err));
     } finally {
-      setLoading(false);
+      onActingChange(false);
     }
+  }
+
+  if (ticket.busy || isActing) {
+    const message = isActing && !ticket.busy ? "Sending…" : formatBusyMessage(ticket);
+    return (
+      <div className="action-bar">
+        <WorkingHint message={message} />
+        {error && <p className="error">{error}</p>}
+      </div>
+    );
   }
 
   if (ticket.awaiting === "plan") {
     return (
       <div className="action-bar">
-        <button disabled={busy} onClick={() => run(() => respondTicket(ticket.issueKey, "approve"))}>
+        <button disabled={blocked} onClick={() => run(() => respondTicket(ticket.issueKey, "approve"))}>
           Implement
         </button>
-        <button disabled={busy} className="danger" onClick={() => run(() => respondTicket(ticket.issueKey, "reject"))}>
+        <button disabled={blocked} className="danger" onClick={() => run(() => respondTicket(ticket.issueKey, "reject"))}>
           Reject
         </button>
         <div className="comment-row">
@@ -43,10 +65,10 @@ export function ActionBar({ ticket, onAction, disabled }: Props) {
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Plan feedback…"
-            disabled={busy}
+            disabled={blocked}
           />
           <button
-            disabled={busy || !comment.trim()}
+            disabled={blocked || !comment.trim()}
             onClick={() => run(() => respondTicket(ticket.issueKey, "comment", comment.trim()))}
           >
             Send feedback
@@ -60,10 +82,10 @@ export function ActionBar({ ticket, onAction, disabled }: Props) {
   if (ticket.awaiting === "ship") {
     return (
       <div className="action-bar">
-        <button disabled={busy} onClick={() => run(() => respondTicket(ticket.issueKey, "ship"))}>
+        <button disabled={blocked} onClick={() => run(() => respondTicket(ticket.issueKey, "ship"))}>
           Ship
         </button>
-        <button disabled={busy} className="danger" onClick={() => run(() => respondTicket(ticket.issueKey, "reject"))}>
+        <button disabled={blocked} className="danger" onClick={() => run(() => respondTicket(ticket.issueKey, "reject"))}>
           Reject
         </button>
         <div className="comment-row">
@@ -71,10 +93,10 @@ export function ActionBar({ ticket, onAction, disabled }: Props) {
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Ship feedback…"
-            disabled={busy}
+            disabled={blocked}
           />
           <button
-            disabled={busy || !comment.trim()}
+            disabled={blocked || !comment.trim()}
             onClick={() => run(() => respondTicket(ticket.issueKey, "comment", comment.trim()))}
           >
             Send feedback
@@ -93,10 +115,10 @@ export function ActionBar({ ticket, onAction, disabled }: Props) {
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Your answer…"
-            disabled={busy}
+            disabled={blocked}
           />
           <button
-            disabled={busy || !comment.trim()}
+            disabled={blocked || !comment.trim()}
             onClick={() => run(() => resumeTicket(ticket.issueKey, comment.trim()))}
           >
             Submit answer

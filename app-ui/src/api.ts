@@ -1,4 +1,11 @@
 import type { AgentRecord, TicketSummary } from "./types";
+import { ApiError } from "./ticketStatus";
+
+export type { ApiError };
+
+export type TicketActionResponse = {
+  ticket: TicketSummary | null;
+};
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -7,7 +14,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const body = (await res.json()) as T & { error?: string };
   if (!res.ok) {
-    throw new Error(body.error ?? `Request failed: ${res.status}`);
+    throw new ApiError(body.error ?? `Request failed: ${res.status}`, res.status);
   }
   return body;
 }
@@ -41,7 +48,11 @@ export async function fetchTickets(): Promise<{
   return request("/api/tickets");
 }
 
-export async function startTicket(issueKey: string): Promise<unknown> {
+export async function fetchTicket(issueKey: string): Promise<TicketSummary> {
+  return request(`/api/tickets/${issueKey}`);
+}
+
+export async function startTicket(issueKey: string): Promise<TicketActionResponse> {
   return request(`/api/tickets/${issueKey}/start`, { method: "POST" });
 }
 
@@ -49,14 +60,14 @@ export async function respondTicket(
   issueKey: string,
   action: "approve" | "reject" | "ship" | "comment",
   text?: string
-): Promise<unknown> {
+): Promise<TicketActionResponse> {
   return request(`/api/tickets/${issueKey}/respond`, {
     method: "POST",
     body: JSON.stringify({ action, ...(text ? { text } : {}) }),
   });
 }
 
-export async function resumeTicket(issueKey: string, message: string): Promise<unknown> {
+export async function resumeTicket(issueKey: string, message: string): Promise<TicketActionResponse> {
   return request(`/api/tickets/${issueKey}/resume`, {
     method: "POST",
     body: JSON.stringify({ message }),
