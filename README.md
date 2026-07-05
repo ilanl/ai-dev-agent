@@ -58,6 +58,7 @@ NDJSON over Unix socket (default `.agent-runs/agent.sock`). Methods:
 | `ticket.status` | Checkpoint + interrupt state |
 | `ticket.reset` | Delete checkpoint, meta, and artifacts for thread |
 | `ticket.list` | List runs for agent |
+| `ticket.listWithStatus` | List runs with live status, phase, and awaiting gate |
 | `session.focus` | Switch active `{ agentId, issueKey? }` |
 | `session.current` | Current focus |
 | `agent.register` | Register agent slot |
@@ -85,5 +86,23 @@ Events: `run.started`, `interrupt`, `run.completed`, `run.error`
 - `~/.ticket-solver-skill.env`
 
 Set `AGENT_RUNTIME=codex` to use legacy Codex CLI instead.
+
+## Dashboard
+
+Local web UI for ticket inbox, status, and human gates (implement / ship).
+
+```bash
+npm run agentd          # terminal 1
+npm run dashboard       # terminal 2 — build UI + serve on http://127.0.0.1:9478
+
+# Dev (hot reload UI, API on :9478, UI on :5173)
+npm run dashboard:dev
+```
+
+| Variable | Purpose |
+|----------|---------|
+| `DASHBOARD_HOST` | Bind host (default `127.0.0.1`) |
+| `DASHBOARD_PORT` | HTTP + WebSocket port (default `9478`) |
+| `DASHBOARD_AGENT_ID` | Default agent in picker |
 
 See [docs/cursor-cli-migration-plan.md](docs/cursor-cli-migration-plan.md) and [docs/v1-implementation-plan.md](docs/v1-implementation-plan.md).

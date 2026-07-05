@@ -27,6 +27,15 @@ export class AgentSocketClient {
   >();
   private nextId = 1;
   private welcome: WelcomeMessage | null = null;
+  private globalOnEvent: ((event: EventMessage) => void) | null = null;
+
+  setOnEvent(handler: ((event: EventMessage) => void) | null): void {
+    this.globalOnEvent = handler;
+  }
+
+  isConnected(): boolean {
+    return this.socket !== null;
+  }
 
   async connect(socketPath?: string): Promise<boolean> {
     const path = resolveSocketPath(socketPath ?? loadServerEnv().socketPath);
@@ -115,6 +124,7 @@ export class AgentSocketClient {
     }
 
     if (message.type === "event") {
+      this.globalOnEvent?.(message);
       for (const [, pending] of this.pending) {
         pending.events.push(message);
         pending.onEvent?.(message);

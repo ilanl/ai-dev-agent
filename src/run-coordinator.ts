@@ -19,6 +19,11 @@ import {
   saveRunMeta,
   type RunMeta,
 } from "./integrations/run-registry.js";
+import {
+  mergeTicketSummary,
+  sortTicketSummaries,
+  type TicketSummary,
+} from "./server/ticket-views.js";
 
 export type RunEvent =
   | { event: "run.started"; data: { threadId: string } }
@@ -269,6 +274,17 @@ export class RunCoordinator {
 
   async list(agentId?: string): Promise<RunMeta[]> {
     return listRunMeta(agentId);
+  }
+
+  async listWithStatus(agentId?: string): Promise<TicketSummary[]> {
+    const metas = await listRunMeta(agentId);
+    const summaries = await Promise.all(
+      metas.map(async (meta) => {
+        const status = await this.status(meta.threadId);
+        return mergeTicketSummary(meta, status, this.isThreadBusy(meta.threadId));
+      })
+    );
+    return sortTicketSummaries(summaries);
   }
 
   async reset(threadId: string): Promise<ResetResult> {

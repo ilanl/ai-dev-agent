@@ -8,6 +8,11 @@
     "agentd": "tsx src/server/agentd.ts",
     "agent": "tsx src/dev-agent.ts",
     "slack": "tsx src/slack/bot.ts",
+    "dashboard:build": "vite build --config app-ui/vite.config.ts",
+    "dashboard:server": "tsx src/app-server/main.ts",
+    "dashboard:dev:ui": "vite --config app-ui/vite.config.ts",
+    "dashboard:dev": "concurrently -k -n server,ui -c blue,green \"npm run dashboard:server\" \"npm run dashboard:dev:ui\"",
+    "dashboard": "npm run dashboard:build && npm run dashboard:server",
     "typecheck": "tsc --noEmit"
   },
   "type": "module",
@@ -30,11 +35,19 @@
     "@slack/bolt": "^4.7.3",
     "dotenv": "^17.4.2",
     "execa": "^9.6.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "ws": "^8.19.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "concurrently": "^9.2.1",
     "tsx": "^4.22.5",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vite": "^7.3.1"
   }
 }

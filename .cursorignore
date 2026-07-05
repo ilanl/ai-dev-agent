@@ -37,3 +37,5 @@ tests/**/*.mp3
 
 # Test coverage (if added later)
 coverage/
+.worktrees/
+

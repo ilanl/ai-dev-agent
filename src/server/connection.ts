@@ -212,6 +212,8 @@ export class ClientConnection {
         return this.ticketStatus(params);
       case "ticket.list":
         return this.ticketList(params);
+      case "ticket.listWithStatus":
+        return this.ticketListWithStatus(params);
       case "ticket.reset":
         return this.ticketReset(params);
       default:
@@ -370,6 +372,11 @@ export class ClientConnection {
   private async ticketList(params: Record<string, unknown>) {
     const agentId = optionalString(params, "agentId") ?? this.focus.agentId;
     return getRunCoordinator().list(agentId);
+  }
+
+  private async ticketListWithStatus(params: Record<string, unknown>) {
+    const agentId = optionalString(params, "agentId") ?? this.focus.agentId;
+    return getRunCoordinator().listWithStatus(agentId);
   }
 
   private async ticketReset(params: Record<string, unknown>) {

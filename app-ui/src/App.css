@@ -1,0 +1,322 @@
+:root {
+  color-scheme: dark;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  color: #e8eaed;
+  background: #0f1117;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #2a2f3a;
+  background: #151922;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c0392b;
+}
+
+.dot.ok {
+  background: #2ecc71;
+}
+
+.ws {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.ws.ok {
+  color: #2ecc71;
+}
+
+.agent-picker,
+.start-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.start-row input {
+  width: 7rem;
+}
+
+input,
+select {
+  background: #0f1117;
+  border: 1px solid #2a2f3a;
+  color: inherit;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+}
+
+button {
+  background: #2d6cdf;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.danger {
+  background: #8b2e2e;
+}
+
+.banner {
+  padding: 0.5rem 1rem;
+  background: #3d2f00;
+  border-bottom: 1px solid #5c4a00;
+}
+
+.banner.error {
+  background: #3d1515;
+  border-color: #6b2020;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: calc(100vh - 56px);
+}
+
+.inbox {
+  border-right: 1px solid #2a2f3a;
+  padding: 0.75rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.filters button {
+  background: #1c2130;
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+.filters button.active {
+  background: #2d6cdf;
+  color: white;
+}
+
+.filters .count {
+  margin-left: 0.25rem;
+  opacity: 0.8;
+}
+
+.ticket-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ticket-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 0.15rem 0.5rem;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border: 1px solid transparent;
+  padding: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.ticket-row:hover {
+  background: #1a1f2b;
+}
+
+.ticket-row.selected {
+  border-color: #2d6cdf;
+  background: #1a2438;
+}
+
+.ticket-row .key {
+  font-weight: 600;
+}
+
+.ticket-row .phase {
+  grid-row: span 2;
+  align-self: center;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #9aa0a6;
+}
+
+.phase-needs_you .phase,
+.badge.phase-needs_you {
+  color: #f1c40f;
+}
+
+.phase-running .phase,
+.badge.phase-running {
+  color: #5dade2;
+}
+
+.phase-done .phase,
+.badge.phase-done {
+  color: #7dce82;
+}
+
+.ticket-row .when {
+  font-size: 0.75rem;
+  color: #777;
+}
+
+.detail-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail {
+  padding: 1rem 1.25rem;
+  flex: 1;
+}
+
+.detail.empty {
+  color: #888;
+}
+
+.detail header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.detail h2 {
+  margin: 0;
+}
+
+.badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: #1c2130;
+}
+
+.badge.awaiting {
+  background: #3d3200;
+  color: #f1c40f;
+}
+
+.badge.busy {
+  background: #1a3050;
+  color: #5dade2;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.meta dt {
+  color: #888;
+}
+
+.interrupt pre {
+  white-space: pre-wrap;
+  background: #151922;
+  border: 1px solid #2a2f3a;
+  border-radius: 8px;
+  padding: 0.75rem;
+  overflow: auto;
+}
+
+.action-bar {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.comment-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.comment-row input {
+  flex: 1;
+}
+
+.error {
+  color: #ff8a80;
+}
+
+.detail-footer {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid #2a2f3a;
+}
+
+.loading {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: #151922;
+  border: 1px solid #2a2f3a;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

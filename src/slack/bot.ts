@@ -267,7 +267,9 @@ async function main(): Promise<void> {
     throw new Error("Only SLACK_MODE=socket is supported");
   }
 
-  const gateway = new AgentGateway(env.agentId, (event) => {
+  const gateway = new AgentGateway(env.agentId, {
+    clientName: "slack",
+    onRunEvent: (event) => {
     const data = event.data as { threadId?: string; gate?: string; status?: string; message?: string };
     logGateway("event", {
       event: event.event,
@@ -276,6 +278,7 @@ async function main(): Promise<void> {
       ...(data.status ? { status: data.status } : {}),
       ...(data.message ? { error: data.message } : {}),
     });
+    },
   });
 
   const boltLogLevel =
