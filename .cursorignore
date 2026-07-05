@@ -1,0 +1,39 @@
+# Dependencies — huge, never useful in agent context
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# Secrets — never index API keys or tokens
+.env
+.env.*
+!.env.example
+
+# Lockfiles — large, low signal (versions live in package.json)
+package-lock.json
+
+# Logs and OS noise
+*.log
+.DS_Store
+
+# Git internals
+.git/
+
+# Vite dev cache
+**/.vite/
+
+# Demo audio fixtures (binary, already gitignored)
+tests/**/*.mp3
+
+# Local Cursor / Agora context (machine-specific)
+.cursor-context.local.json
+.agora-context/
+
+# Editor configs
+.vscode/
+.idea/
+
+# Test coverage (if added later)
+coverage/

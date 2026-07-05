@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "agent": "tsx src/dev-agent.ts"
+    "agentd": "tsx src/server/agentd.ts",
+    "agent": "tsx src/dev-agent.ts",
+    "slack": "tsx src/slack/bot.ts",
+    "typecheck": "tsc --noEmit"
   },
   "type": "module",
   "repository": {
@@ -22,7 +25,9 @@
   "dependencies": {
     "@langchain/core": "^1.2.1",
     "@langchain/langgraph": "^1.4.7",
+    "@langchain/langgraph-checkpoint-sqlite": "^1.0.3",
     "@langchain/openai": "^1.5.3",
+    "@slack/bolt": "^4.7.3",
     "dotenv": "^17.4.2",
     "execa": "^9.6.1",
     "zod": "^4.4.3"
