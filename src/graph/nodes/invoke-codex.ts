@@ -35,7 +35,7 @@ export async function invokeCodex(state: AgentStateType): Promise<Partial<AgentS
   const result = await runDeveloperAgent({
     repoPath: state.activeRepoPath,
     prompt,
-    extraReadDirs: [state.globalSkillsDir],
+    extraReadDirs: [state.agentSkillsDir],
     ...(state.codexSessionId ? { sessionId: state.codexSessionId } : {}),
   });
 

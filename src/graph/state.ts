@@ -38,7 +38,7 @@ export const AgentState = Annotation.Root({
   e2eCommand: Annotation<string | undefined>(),
   codingRules: Annotation<string>(),
   skillsContext: Annotation<string>(),
-  globalSkillsDir: Annotation<string>(),
+  agentSkillsDir: Annotation<string>(),
   nodeVersion: Annotation<string | undefined>(),
 
   implementationPlan: Annotation<string>(),

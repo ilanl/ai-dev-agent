@@ -12,7 +12,7 @@ export interface CodexRunOptions {
   prompt: string;
   sessionId?: string;
   sandbox?: CodexSandbox;
-  /** Extra directories Codex may read (e.g. ~/.cursor/skills) */
+  /** Extra directories Codex may read (e.g. project `.cursor/skills`) */
   extraReadDirs?: string[];
 }
 
@@ -288,7 +288,7 @@ export function buildCodexPlanPrompt(options: {
     "",
     "# Rules",
     "- READ and explore the repository to find code relevant to this ticket.",
-    "- Follow skills from the **active repo** (`.cursor/skills/`) and **global agent skills** (`~/.cursor/skills/`). Read skill files on disk; lean mode does not inline bodies.",
+    "- Follow skills from the **active repo** (`.cursor/skills/`) and **agent skills** (this project's `.cursor/skills/`). Read skill files on disk; lean mode does not inline bodies.",
     "- Use AGENTS.md when present.",
     ...SILENT_OUTPUT_RULES,
     "- Do NOT edit any files. Do NOT create branches. Do NOT commit.",
@@ -384,7 +384,7 @@ export function buildCodexPrompt(options: {
     "",
     "# Rules",
     ...SILENT_OUTPUT_RULES,
-    "- Follow skills from the **active repo** (`.cursor/skills/`) and **global agent skills** (`~/.cursor/skills/`). Read skill files on disk; lean mode does not inline bodies.",
+    "- Follow skills from the **active repo** (`.cursor/skills/`) and **agent skills** (this project's `.cursor/skills/`). Read skill files on disk; lean mode does not inline bodies.",
     "- Make minimal, focused changes.",
     "- Do NOT run git commit, git push, or open merge requests.",
     "- Run lint and tests locally to verify your work.",

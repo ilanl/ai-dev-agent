@@ -1,5 +1,9 @@
 import { buildThreadId } from "../integrations/run-registry.js";
-import type { ResetResult, RunResult, RunStatusResult } from "../run-coordinator.js";
+import type {
+  ResetResult,
+  RunResult,
+  RunStatusResult,
+} from "../run-coordinator.js";
 import type { RunMeta } from "../integrations/run-registry.js";
 import { AgentSocketClient } from "./client.js";
 import type { EventMessage } from "./protocol.js";
@@ -12,7 +16,7 @@ export class AgentGateway {
 
   constructor(
     private readonly agentId: string,
-    private readonly onRunEvent?: RunEventHandler
+    private readonly onRunEvent?: RunEventHandler,
   ) {}
 
   private eventHandler(): RunEventHandler | undefined {
@@ -25,7 +29,7 @@ export class AgentGateway {
     const client = new AgentSocketClient();
     const ok = await client.connect();
     if (!ok) {
-      throw new Error("agentd is not running. Start it with: npm run agentd");
+      throw new Error("agentd is not running. Start it with: pnpm run agentd");
     }
     await client.hello({ client: "slack", agentId: this.agentId });
     this.client = client;
@@ -50,7 +54,7 @@ export class AgentGateway {
           issueKey: issueKey.toUpperCase(),
           agentId: this.agentId,
         },
-        this.eventHandler()
+        this.eventHandler(),
       );
       if (!res.ok) throw new Error(res.error?.message ?? "ticket.start failed");
       return res.result as RunResult;
@@ -63,9 +67,10 @@ export class AgentGateway {
       const res = await client.request<RunResult>(
         "ticket.resume",
         { threadId, message },
-        this.eventHandler()
+        this.eventHandler(),
       );
-      if (!res.ok) throw new Error(res.error?.message ?? "ticket.resume failed");
+      if (!res.ok)
+        throw new Error(res.error?.message ?? "ticket.resume failed");
       return res.result as RunResult;
     });
   }
@@ -75,7 +80,8 @@ export class AgentGateway {
       const res = await client.request<RunStatusResult>("ticket.status", {
         threadId: this.threadId(issueKey),
       });
-      if (!res.ok) throw new Error(res.error?.message ?? "ticket.status failed");
+      if (!res.ok)
+        throw new Error(res.error?.message ?? "ticket.status failed");
       return res.result as RunStatusResult;
     });
   }
@@ -92,7 +98,9 @@ export class AgentGateway {
 
   async list(): Promise<RunMeta[]> {
     return this.run(async (client) => {
-      const res = await client.request<RunMeta[]>("ticket.list", { agentId: this.agentId });
+      const res = await client.request<RunMeta[]>("ticket.list", {
+        agentId: this.agentId,
+      });
       if (!res.ok) throw new Error(res.error?.message ?? "ticket.list failed");
       return res.result as RunMeta[];
     });

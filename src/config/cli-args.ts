@@ -2,7 +2,9 @@ import { userInfo } from "node:os";
 import type { RepoScope } from "./repos.js";
 import { resolveRepoPaths } from "./server-env.js";
 
-export type AgentCommand = "start" | "resume" | "status" | "list" | "reset";
+import type { AgentCommand } from "../contract/agent/commands.js";
+
+export type { AgentCommand };
 
 export interface CliArgs {
   command: AgentCommand;
@@ -271,14 +273,14 @@ function printHelp(): void {
 AI Dev Agent — daemon-backed CLI with checkpoint resume
 
 Start the daemon first:
-  npm run agentd
+  ppnpm run agentd
 
 Usage:
-  npm run agent -- AE-1234 [options]
-  npm run agent -- AE-1234 resume [-m "approve"] [--agent-id <id>]
-  npm run agent -- AE-1234 status [--agent-id <id>]
-  npm run agent -- AE-1234 reset [--agent-id <id>]
-  npm run agent -- list [--agent-id <id>]
+  pnpm run agent -- AE-1234 [options]
+  pnpm run agent -- AE-1234 resume [-m "approve"] [--agent-id <id>]
+  pnpm run agent -- AE-1234 status [--agent-id <id>]
+  pnpm run agent -- AE-1234 reset [--agent-id <id>]
+  pnpm run agent -- list [--agent-id <id>]
 
 Repo paths (start):
   Set CLIENT_REPO_PATH and SERVER_REPO_PATH in .env (use N/A if not applicable)
@@ -308,10 +310,10 @@ Environment:
   OPENAI_API_KEY        Required for Codex
 
 Examples:
-  npm run agentd
-  npm run agent -- AE-1234 --dry-run
-  npm run agent -- AE-1234 resume -m approve
-  npm run agent -- AE-1234 reset
-  npm run agent -- AE-1234 resume -m ship --agent-id ilan
+  ppnpm run agentd
+  pnpm run agent -- AE-1234 --dry-run
+  pnpm run agent -- AE-1234 resume -m approve
+  pnpm run agent -- AE-1234 reset
+  pnpm run agent -- AE-1234 resume -m ship --agent-id ilan
 `);
 }

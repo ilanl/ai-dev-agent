@@ -4,7 +4,7 @@ import { logNodeDone, logNodeStart } from "../../integrations/agent-log.js";
 import { loadAgentsMd } from "../../integrations/codex.js";
 import { getCurrentBranch } from "../../integrations/git.js";
 import { nodeVersionFromNvmrc, readNvmrc } from "../../integrations/repo-node.js";
-import { loadAgentSkillsContext } from "../../integrations/global-skills.js";
+import { loadAgentSkillsContext } from "../../integrations/agent-skills.js";
 import { resolveSkillsMode } from "../../integrations/repo-skills.js";
 import type { AgentStateType } from "../state.js";
 
@@ -84,7 +84,7 @@ export async function resolveRepo(state: AgentStateType): Promise<Partial<AgentS
     baseBranch,
     codingRules,
     skillsContext: skillsBundle.context,
-    globalSkillsDir: skillsBundle.globalSkillsDir,
+    agentSkillsDir: skillsBundle.agentSkillsDir,
     nodeVersion,
     lintCommand: cli.lint ?? profile.lint,
     testCommand: cli.test ?? profile.test,

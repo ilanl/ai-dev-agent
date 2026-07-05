@@ -95,10 +95,10 @@ function printResumeGuidance(status: RunStatusResult): void {
   }
   console.log("\nNothing to resume. The run already finished.");
   if (status.status === "failed") {
-    console.log("Fix the issue, then: npm run agent -- <AE-KEY> reset");
-    console.log("Then start again: npm run agent -- <AE-KEY>");
+    console.log("Fix the issue, then: pnpm run agent -- <AE-KEY> reset");
+    console.log("Then start again: pnpm run agent -- <AE-KEY>");
   } else {
-    console.log("Start fresh: npm run agent -- <AE-KEY> reset");
+    console.log("Start fresh: pnpm run agent -- <AE-KEY> reset");
   }
 }
 
@@ -186,7 +186,7 @@ async function runViaDaemon(
   const client = await tryConnectClient(cli.agentId);
   if (!client) {
     throw new Error(
-      "agentd is not running. Start it with: npm run agentd\nOr use --local to run in-process.",
+      "agentd is not running. Start it with: ppnpm run agentd\nOr use --local to run in-process.",
     );
   }
 
@@ -214,24 +214,30 @@ async function runViaDaemon(
 
     if (cli.command === "resume") {
       const statusRes = await client.request("ticket.status", { threadId });
+      console.log("statusRes", statusRes);
       if (!statusRes.ok)
         throw new Error(statusRes.error?.message ?? "ticket.status failed");
       const status = statusRes.result as RunStatusResult;
-      return resumeWithStatus(status, cli.message, async (message) => {
-        const res = await client.request("ticket.resume", {
-          threadId,
-          message,
-        });
-        if (!res.ok)
-          throw new Error(res.error?.message ?? "ticket.resume failed");
-        return res.result as RunResult;
-      });
+      const resumptionExitCode = await resumeWithStatus(
+        status,
+        cli.message,
+        async (message) => {
+          const res = await client.request("ticket.resume", {
+            threadId,
+            message,
+          });
+          if (!res.ok)
+            throw new Error(res.error?.message ?? "ticket.resume failed");
+          return res.result as RunResult;
+        },
+      );
+      return resumptionExitCode;
     }
 
     if (cli.command === "reset") {
       const res = await client.request("ticket.reset", { threadId });
       if (!res.ok && res.error?.code === "UNKNOWN_METHOD") {
-        console.error("agentd is outdated — restart it: npm run agentd");
+        console.error("agentd is outdated — restart it: ppnpm run agentd");
         printResetResult(await getRunCoordinator().reset(threadId));
         return 0;
       }
@@ -295,9 +301,12 @@ async function runLocal(cli: ReturnType<typeof parseCliArgs>): Promise<number> {
 
   if (cli.command === "resume") {
     const status = await coordinator.status(threadId);
-    return resumeWithStatus(status, cli.message, (message) =>
-      coordinator.resume({ threadId, message }),
+    const resumptionExitCode = await resumeWithStatus(
+      status,
+      cli.message,
+      (message) => coordinator.resume({ threadId, message }),
     );
+    return resumptionExitCode;
   }
 
   if (cli.command === "reset") {
@@ -330,7 +339,6 @@ async function runLocal(cli: ReturnType<typeof parseCliArgs>): Promise<number> {
 }
 
 async function main(): Promise<void> {
-  console.log("process.argv", process.argv);
   const cli = parseCliArgs(process.argv.slice(2));
   const exitCode = cli.local ? await runLocal(cli) : await runViaDaemon(cli);
   process.exit(exitCode);

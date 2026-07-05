@@ -1,8 +1,9 @@
-import { connect, type Socket } from "node:net";
+import { connect as connectSocket, type Socket } from "node:net";
 import { loadServerEnv, resolveSocketPath } from "../config/server-env.js";
 import {
   CLIENT_MESSAGE_TYPE,
   SERVER_MESSAGE_TYPE,
+  type AgentMethod,
   type EventMessage,
   type ResponseMessage,
   type WelcomeMessage,
@@ -33,7 +34,7 @@ export class AgentSocketClient {
   async connect(socketPath?: string): Promise<boolean> {
     const path = resolveSocketPath(socketPath ?? loadServerEnv().socketPath);
     return new Promise((resolve) => {
-      const socket = connect(path);
+      const socket = connectSocket(path);
       const onFail = () => {
         socket.destroy();
         resolve(false);
@@ -54,7 +55,10 @@ export class AgentSocketClient {
     });
   }
 
-  async hello(options?: { client?: string; agentId?: string }): Promise<WelcomeMessage> {
+  async hello(options?: {
+    client?: string;
+    agentId?: string;
+  }): Promise<WelcomeMessage> {
     await this.write({
       type: CLIENT_MESSAGE_TYPE.HELLO,
       version: 1,
@@ -67,9 +71,9 @@ export class AgentSocketClient {
   }
 
   async request<T = unknown>(
-    method: string,
+    method: AgentMethod,
     params?: Record<string, unknown>,
-    onEvent?: (event: EventMessage) => void
+    onEvent?: (event: EventMessage) => void,
   ): Promise<RpcResult<T>> {
     if (!this.socket) {
       throw new Error("Not connected");
@@ -111,11 +115,15 @@ export class AgentSocketClient {
       const line = this.buffer.slice(0, idx).trim();
       this.buffer = this.buffer.slice(idx + 1);
       if (!line) continue;
-      this.dispatch(JSON.parse(line) as ResponseMessage | EventMessage | WelcomeMessage);
+      this.dispatch(
+        JSON.parse(line) as ResponseMessage | EventMessage | WelcomeMessage,
+      );
     }
   }
 
-  private dispatch(message: ResponseMessage | EventMessage | WelcomeMessage): void {
+  private dispatch(
+    message: ResponseMessage | EventMessage | WelcomeMessage,
+  ): void {
     if (message.type === SERVER_MESSAGE_TYPE.WELCOME) {
       this.welcome = message;
       return;
@@ -169,10 +177,15 @@ export class AgentSocketClient {
   }
 }
 
-export async function tryConnectClient(agentId?: string): Promise<AgentSocketClient | null> {
+export async function tryConnectClient(
+  agentId?: string,
+): Promise<AgentSocketClient | null> {
   const client = new AgentSocketClient();
   const ok = await client.connect();
   if (!ok) return null;
-  await client.hello({ client: "cli", ...(agentId !== undefined ? { agentId } : {}) });
+  await client.hello({
+    client: "cli",
+    ...(agentId !== undefined ? { agentId } : {}),
+  });
   return client;
 }

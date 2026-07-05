@@ -37,7 +37,7 @@ export async function codexPlan(state: AgentStateType): Promise<Partial<AgentSta
     repoPath: state.activeRepoPath,
     prompt,
     sandbox: "read-only",
-    extraReadDirs: [state.globalSkillsDir],
+    extraReadDirs: [state.agentSkillsDir],
     ...(state.codexPlanSessionId ? { sessionId: state.codexPlanSessionId } : {}),
   });
 

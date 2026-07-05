@@ -1,15 +1,6 @@
-export type ReviewGate = "plan" | "ship" | "question";
+import type { ReviewGate, ReviewInterruptPayload } from "../contract/agent/review.js";
 
-export interface ReviewInterruptPayload {
-  gate: ReviewGate;
-  title: string;
-  body: string;
-  plan?: string;
-  planPath?: string;
-  openRisks?: string[];
-  threadId?: string;
-  hints?: string[];
-}
+export type { ReviewGate, ReviewInterruptPayload };
 
 export type HumanDecision =
   | { action: "approve" }
@@ -80,7 +71,7 @@ export function formatInterruptNotice(payload: ReviewInterruptPayload): string {
 }
 
 function defaultHints(gate: ReviewGate): string[] {
-  const base = 'npm run agent -- <AE-KEY> resume -m "<message>"';
+  const base = 'pnpm run agent -- <AE-KEY> resume -m "<message>"';
   if (gate === "plan") {
     return [
       `${base}`,

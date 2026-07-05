@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { AGENT_METHOD } from "../contract/daemon/methods.js";
+
+export { AGENT_METHOD };
+export type { AgentMethod } from "../contract/daemon/methods.js";
 
 export const PROTOCOL_VERSION = 1;
 

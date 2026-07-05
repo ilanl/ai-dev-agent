@@ -8,8 +8,8 @@ LangGraph orchestrator + Cursor Agent CLI (or Codex fallback) for Jira tickets.
 cp .env.example .env
 # Set OPENAI_API_KEY, CLIENT_REPO_PATH, SERVER_REPO_PATH
 
-npm install
-npm run agentd    # terminal 1 — long-lived daemon
+pnpm install
+pppnpm run agentd    # terminal 1 — long-lived daemon
 ```
 
 ## Usage
@@ -18,24 +18,24 @@ Repo paths come from `.env`. The CLI talks to `agentd` over a Unix socket.
 
 ```bash
 # Start ticket (pauses at plan review)
-npm run agent -- AE-1234
+pnpm run agent -- AE-1234
 
 # Resume
-npm run agent -- AE-1234 resume -m "approve"
-npm run agent -- AE-1234 resume -m "focus on portal module"
-npm run agent -- AE-1234 resume -m "ship"
+pnpm run agent -- AE-1234 resume -m "approve"
+pnpm run agent -- AE-1234 resume -m "focus on portal module"
+pnpm run agent -- AE-1234 resume -m "ship"
 
 # Status / list / reset
-npm run agent -- AE-1234 status
-npm run agent -- AE-1234 reset   # clear checkpoint + plan, start fresh
-npm run agent -- list
+pnpm run agent -- AE-1234 status
+pnpm run agent -- AE-1234 reset   # clear checkpoint + plan, start fresh
+pnpm run agent -- list
 
 # Multi-agent
-npm run agent -- AE-1234 --agent-id ilan
-npm run agent -- AE-1234 --agent-id bob
+pnpm run agent -- AE-1234 --agent-id ilan
+pnpm run agent -- AE-1234 --agent-id bob
 
 # In-process without daemon
-npm run agent -- AE-1234 --local
+pnpm run agent -- AE-1234 --local
 ```
 
 ### Flow
@@ -80,6 +80,7 @@ Events: `run.started`, `interrupt`, `run.completed`, `run.error`
 
 ### Prerequisites
 
+- `pnpm` 10+ (`corepack enable` or `npm i -g pnpm`)
 - `ticket-solver`, `agent` (Cursor Agent CLI), `glab` on PATH
 - `agent login` (or `CURSOR_API_KEY`)
 - `~/.ticket-solver-skill.env`
@@ -87,3 +88,26 @@ Events: `run.started`, `interrupt`, `run.completed`, `run.error`
 Set `AGENT_RUNTIME=codex` to use legacy Codex CLI instead.
 
 See [docs/cursor-cli-migration-plan.md](docs/cursor-cli-migration-plan.md) and [docs/v1-implementation-plan.md](docs/v1-implementation-plan.md).
+
+## Web app
+
+Ticket management UI lives in `src/apps/web`. It talks to the HTTP API (`src/server/http-api.ts`), which wraps the same Jira ticket resolver and run coordinator as the CLI.
+
+```bash
+# terminal 1 — agent daemon (unix socket + HTTP API on AGENT_HTTP_PORT)
+pnpm run agentd
+
+# terminal 2 — Vite dev server
+pnpm run web
+```
+
+Set `API_BASE_URL=http://127.0.0.1:9478` in `src/apps/web/.env` (must match `AGENT_HTTP_PORT`).
+`pnpm run httpd` is still available if you only want the HTTP API without the daemon.
+
+Open http://localhost:5173 (or your `WEB_APP_PORT`). The layout matches the Figma reference: tickets table on the left, detail panel on the right when a row is selected (no sidebar for now).
+
+| Variable | Purpose |
+|----------|---------|
+| `AGENT_HTTP_PORT` | HTTP API port (default `9478`) — web UI `API_BASE_URL` |
+| `AGENT_SERVER_PORT` | Optional NDJSON tcp for remote clients (must differ from `AGENT_HTTP_PORT`) |
+| `AGENT_HTTP_CORS` | Override CORS origin (default: reflect localhost origins) |

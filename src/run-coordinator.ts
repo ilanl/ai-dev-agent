@@ -45,6 +45,9 @@ export interface RunStatusResult {
   planPath?: string;
   branchName?: string;
   activeRepoPath?: string;
+  summary?: string;
+  browseUrl?: string | null;
+  scope?: AgentStateType["scope"];
   awaiting?: ReviewInterruptPayload["gate"];
   interrupt?: ReviewInterruptPayload;
 }
@@ -248,10 +251,15 @@ export class RunCoordinator {
     if (values?.agentId) result.agentId = values.agentId;
     if (values?.jiraIssueKey) result.issueKey = values.jiraIssueKey;
     if (values?.status) result.status = values.status;
-  if (values?.error) result.error = values.error;
+    if (values?.error) result.error = values.error;
     if (values?.planPath) result.planPath = values.planPath;
     if (values?.branchName) result.branchName = values.branchName;
     if (values?.activeRepoPath) result.activeRepoPath = values.activeRepoPath;
+    if (values?.scope) result.scope = values.scope;
+    if (values?.jira?.summary) result.summary = values.jira.summary;
+    if (values?.jira?.jira.browseUrl !== undefined) {
+      result.browseUrl = values.jira.jira.browseUrl;
+    }
     if (interrupt) {
       const enriched: ReviewInterruptPayload = { ...interrupt };
       if (interrupt.gate === "plan") {
@@ -471,7 +479,7 @@ function buildInitialState(cli: CliArgs, threadId: string): AgentStateType {
     testCommand: "",
     codingRules: "",
     skillsContext: "",
-    globalSkillsDir: "",
+    agentSkillsDir: "",
     implementationPlan: "",
     planPath: undefined,
     planApproved: false,

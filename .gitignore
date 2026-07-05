@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+package-lock.json
 
 # Environment & secrets
 .env
@@ -32,3 +33,6 @@ Thumbs.db
 # Agora / Cursor local context (machine-specific)
 .cursor-context.local.json
 .agora-context/
+
+# pnpm
+.pnpm-store/
